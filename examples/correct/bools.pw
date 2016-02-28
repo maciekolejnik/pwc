@@ -1,0 +1,13 @@
+var
+a : bool;
+b : bool;
+c : bool;
+x : {0,1,2};
+y : {0,1,2};
+begin
+a := x > y;
+b := y = 2;
+c := a || (a && b);
+c := not c;
+stop;
+end

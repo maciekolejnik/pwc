@@ -1,0 +1,11 @@
+var 
+x : {0..10};
+y : {0..10};
+b : bool;
+begin
+if b 
+then x := y
+else y := x
+fi;
+stop;
+end
