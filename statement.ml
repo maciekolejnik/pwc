@@ -237,19 +237,19 @@ print_cstmts csl =
 *)
 
 (***********************************************************************)
-(* Octave Output                                                       *)
+(* Julia Output                                                       *)
 (***********************************************************************)
 
-let octave_stmt s =
-  if !flagOctave then output_stmt !fidOctave s
+let julia_stmt s =
+  if !flagJulia then output_stmt !fidJulia s
 ;;
 
-let octave_test b =
-  if !flagOctave then output_bexpr !fidOctave b
+let julia_test b =
+  if !flagJulia then output_bexpr !fidJulia b
 ;;
 
-let octave_aexprs s =
-  if !flagOctave then output_aexpr !fidOctave s
+let julia_aexprs s =
+  if !flagJulia then output_aexpr !fidJulia s
 ;;
 
 (***********************************************************************)

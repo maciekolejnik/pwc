@@ -6,7 +6,7 @@ let flagVerbose = ref false
 and flagBinary  = ref false
 and flagText    = ref false
 and flagLaTeX   = ref false
-and flagOctave  = ref false 
+and flagJulia   = ref true 
 and flagUndef   = ref false
 ;;
 
@@ -15,14 +15,14 @@ and srcName  = ref ""
 and binName  = ref ""
 and txtName  = ref ""
 and texName  = ref ""
-and octName  = ref ""
+and julName  = ref ""
 ;;
 
 let fidVerbose = ref stdout
 and fidBinary  = ref stdout
 and fidText    = ref stdout
 and fidLaTeX   = ref stdout
-and fidOctave  = ref stdout
+and fidJulia   = ref stdout
 ;;
 
 (***********************************************************************)
@@ -42,79 +42,35 @@ let output_newline outch =
 ;;
 
 (***********************************************************************)
-(* Octave Output                                                       *)
+(* Julia Output                                                       *)
 (***********************************************************************)
 
-let octave_string s =
-  if !flagOctave then output_string !fidOctave s
+let julia_string s =
+  if !flagJulia then output_string !fidJulia s
 ;;
 
-let octave_int i =
-  if !flagOctave then output_int !fidOctave i
+let julia_int i =
+  if !flagJulia then output_int !fidJulia i
 ;;
 
-let octave_float f =
-  if !flagOctave then output_float !fidOctave f
+let julia_float f =
+  if !flagJulia then output_float !fidJulia f
 ;;
 
-let octave_newline () =
-  if !flagOctave then output_string !fidOctave "\n"
+let julia_newline () =
+  if !flagJulia then output_string !fidJulia "\n"
 ;;
 
 (***********************************************************************)
 
-let octave_seperator () =
-  octave_newline ();
-  octave_string "#";
+let julia_seperator () =
+  julia_newline ();
+  julia_string "#";
   for i = 1 to 69 do
-    octave_string "-"
+    julia_string "-"
   done;
-  octave_newline ();
-  octave_newline ()
-;;
-
-(***********************************************************************)
-
-let octave_introw il =
-  let elem i =
-    begin
-    octave_string ", ";
-    octave_int i
-    end
-  in
-  if il != [] then 
-    begin
-    octave_int (List.hd il);
-    List.iter elem (List.tl il);
-    end
-;;
-
-let octave_intcol il =
-  let elem i =
-    begin
-    octave_string "; ";
-    octave_int i
-    end
-  in
-  if il != [] then 
-    begin
-    octave_int (List.hd il);
-    List.iter elem (List.tl il);
-    end
-;;
-
-let octave_floatcol fl =
-  let elem f =
-    begin
-    octave_string "; ";
-    octave_float f
-    end
-  in
-  if fl != [] then 
-    begin
-    octave_float (List.hd fl);
-    List.iter elem (List.tl fl);
-    end
+  julia_newline ();
+  julia_newline ()
 ;;
 
 (***********************************************************************)

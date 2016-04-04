@@ -161,5 +161,65 @@ let print_allocation atable =
 (** Julia Output                                                       *)
 (***********************************************************************)
 
+let julia_decls decls = 
+  julia_string "#=\n";
+  output_decls !fidJulia decls;
+  julia_string "=#\n"
+;;
 
+let julia_id2rng (id,m) =
+  julia_string "\t\"";
+  julia_string id;
+  julia_string "\"";
+  julia_string " => ";
+  match m with
+  | Var(r) -> 
+      begin
+        julia_string "range(";
+        julia_int (List.hd r);
+        julia_string ",";
+        julia_int (List.length r);
+        julia_string "),\n"
+      end
+;;
+
+let julia_ids2rng decls =
+  julia_string "const id2rng = Dict(\n";
+  List.iter julia_id2rng decls;
+  julia_string ")\n";
+;;
+
+let julia_variables decls = 
+  if !flagJulia then 
+    begin
+      julia_string "# Linear operator semantics";
+
+      julia_seperator ();
+
+      julia_string "# Generated from ";
+      julia_string !srcName;
+      julia_string " by pWhile compiler - (c) 2016 H.Wiklicky, M.Olejnik\n";
+
+      julia_seperator ();
+
+      julia_decls decls;
+
+      julia_seperator ();
+
+      julia_ids2rng decls;
+
+      julia_seperator ();
+
+      julia_string "const v = ";
+      julia_int (List.length decls);
+      julia_string " # number of variables\n\n";
+
+      julia_string "const dim = map(length, values(id2rng))\n\n";
+      
+      julia_string "const d = prod(dim)\n\n";
+      
+      julia_seperator ();
+
+    end
+;;
 

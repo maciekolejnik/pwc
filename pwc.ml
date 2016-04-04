@@ -30,8 +30,8 @@ let arguments () =
     ("-T", Arg.Set   (flagText),    "Text Output on    ");
     ("-x", Arg.Clear (flagLaTeX),   "LaTeX Output off  [default: off] ");
     ("-X", Arg.Set   (flagLaTeX),   "LaTeX Output on   ");
-    ("-m", Arg.Clear (flagOctave),  "Octave Output off [default: on] ");
-    ("-M", Arg.Set   (flagOctave),  "Octave Output on  ");
+    ("-m", Arg.Clear (flagJulia),   "Julia Output off [default: on] ");
+    ("-M", Arg.Set   (flagJulia),   "Julia Output on  ");
     ("-u", Arg.Clear (flagUndef),   "Undefined off [default: off] ");
     ("-U", Arg.Set   (flagUndef),   "Undefined used \n")]
   and set_basename s =
@@ -41,7 +41,7 @@ let arguments () =
       binName := !baseName^".pwi";
       txtName := !baseName^".txt";
       texName := !baseName^".tex";
-      octName := !baseName^".m";
+      julName := !baseName^".jl";
     end
   and usage =
     "Usage:\n\npwc basename [-v/-V][-b/-B][-t/-T][-x/-X][-m/-M][-u/-U]\n"
@@ -58,7 +58,7 @@ let open_files () =
     if !flagBinary then fidBinary := open_out !binName;
     if !flagText then fidText := open_out !txtName;
     if !flagLaTeX then fidLaTeX := open_out !texName;
-    if !flagOctave then fidOctave := open_out !octName;
+    if !flagJulia then fidJulia := open_out !julName;
   end
 ;;
 
@@ -103,7 +103,7 @@ let show_result declList syntaxTree =
 let start () =
   begin
     print_string "pwc 0.98 - pWhile compiler\n";
-    print_string "(c) 2008-15 H.Wiklicky\n";
+    print_string "(c) 2008-16 H.Wiklicky, M.Olejnik\n";
     if !flagVerbose then show_files ();
   end
 ;;
@@ -162,9 +162,8 @@ let main () =
 	  ignore (print_decls declList);
 	  (*ignore (print_allocation allocTable);*)
           (*-----*)
-	  (*ignore (octave_allocation allocTable declList);
-	  ignore (_allocation declList);
-	  ignore (octave_blocks syntaxBlocks);
+	  ignore (julia_variables declList);
+	  (*ignore (octave_blocks syntaxBlocks);
 	  ignore (octave_flow syntaxFlow);*)
 	  print_newline ();
 	end;
