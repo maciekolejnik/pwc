@@ -1,0 +1,11 @@
+var
+  x : {0..3};
+  y : {0..3};
+
+begin
+y := 0;
+for x := 0; x < 3; x := x + 1 do
+  y := y + 1
+od;
+stop
+end

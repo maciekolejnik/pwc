@@ -1,8 +1,9 @@
 var 
-x : {0,1};
-y : {0,1};
+  x : {0,1};
+  y : {0,1};
+
 begin
 x := y;
 y := 1;
-stop;
+stop
 end

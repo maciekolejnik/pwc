@@ -1,0 +1,13 @@
+var
+  x : {0..3};
+  y : {0..3};
+
+begin
+case x
+  of 0: y := 0
+  of 1: y := 1
+  of 2: y := 2
+  default: y := 0
+esac;
+stop
+end

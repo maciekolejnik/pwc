@@ -1,13 +1,11 @@
 var
-a : bool;
-b : bool;
-c : bool;
-x : {0,1,2};
-y : {0,1,2};
+  a : bool;
+  b : bool;
+  x : {0,1,2};
+  y : {0,1,2};
+
 begin
-a := x > y;
-b := y = 2;
-c := a || (a && b);
-c := not c;
-stop;
+if x > y then a := 1 else a := 0 fi;
+if y == 2 then b := 1 else b := 0 fi;
+stop
 end
