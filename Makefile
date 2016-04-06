@@ -39,11 +39,11 @@ statement.cmo: statement.ml global.ml declaration.ml expression.ml
 parser.cmo: parser.ml
 	$(OCAMLC) $(OCAMLFLAG) -c parser.mli
 	$(OCAMLC) $(OCAMLFLAG) -c parser.ml
-parser.ml: parser.mly statement.ml global.ml declaration.ml
+parser.ml: parser.mly global.ml $(SYNTAXFILES) 
 	$(OCAMLYACC) parser.mly 
 lexer.cmo: lexer.ml statement.ml
 	$(OCAMLC) $(OCAMLFLAG) -c lexer.ml
-lexer.ml: lexer.mll statement.ml global.ml declaration.ml
+lexer.ml: lexer.mll global.ml $(SYNTAXFILES)
 	$(OCAMLLEX) lexer.mll
 expression.cmo: expression.ml global.ml
 	$(OCAMLC) $(OCAMLFLAG) -g -c expression.ml

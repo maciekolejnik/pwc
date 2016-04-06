@@ -1,11 +1,11 @@
 var 
-x : {0..10};
-y : {0..10};
-b : bool;
+  x : {0..10};
+  y : {0..10};
+
 begin
-if b 
+if x > y 
 then x := y
 else y := x
 fi;
-stop;
+stop
 end

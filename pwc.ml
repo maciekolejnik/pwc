@@ -163,8 +163,8 @@ let main () =
 	  (*ignore (print_allocation allocTable);*)
           (*-----*)
 	  ignore (julia_variables declList);
-	  (*ignore (octave_blocks syntaxBlocks);
-	  ignore (octave_flow syntaxFlow);*)
+	  ignore (julia_blocks syntaxBlocks);
+	  (*ignore (octave_flow syntaxFlow);*)
 	  print_newline ();
 	end;
 	success lexBuffer;

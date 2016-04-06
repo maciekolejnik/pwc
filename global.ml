@@ -37,6 +37,10 @@ let output_float outch f =
   output_string outch (string_of_float f)
 ;;
 
+let output_bool outch b =
+  output_string outch (string_of_bool b)
+;;
+
 let output_newline outch =
   output_string outch "\n"
 ;;
@@ -63,7 +67,7 @@ let julia_newline () =
 
 (***********************************************************************)
 
-let julia_seperator () =
+let julia_separator () =
   julia_newline ();
   julia_string "#";
   for i = 1 to 69 do

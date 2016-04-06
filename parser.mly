@@ -77,7 +77,7 @@ decls:
 ;
 
 decl:
-  ID COLON range		{ [($1, Declaration.Var($3))] }
+  ID COLON range		{ [($1, Declaration.Variable($3))] }
 ;
 
 /***********************************************************************/
@@ -87,7 +87,7 @@ range:
 | INT				{ Global.interval 
                                   Declaration.minInt 
                                   Declaration.maxInt }
-| LBR consts RBR 		{ List.sort compare $2 }
+| LBR consts RBR 		{ List.sort_uniq compare $2 }
 ;
 
 consts:
@@ -113,7 +113,7 @@ block:
 aexpr:
   LPAR aexpr RPAR		{ $2 }
 | NUM			        { Expression.Const($1) }
-| id                            { $1 }
+| ID                            { Expression.Var($1) }
 | MINUS aexpr %prec UMINUS      { Expression.Minus($2) }
 | aexpr PLUS aexpr	        { Expression.Sum($1,$3) }
 | aexpr MINUS aexpr	        { Expression.Diff($1,$3) }
@@ -143,10 +143,6 @@ cond:
   bexpr                         { Expression.Not($1) }
 ;
 
-id:
-  ID                            { Expression.Var($1) }
-;
-
 /***********************************************************************/
 
 stmt:
@@ -155,8 +151,8 @@ stmt:
 | ID COLON stmt %prec LABEL     { Statement.TaggedStmt($1,$3) }
 | STOP			        { Statement.Stop }
 | SKIP			        { Statement.Skip }
-| id ASSIGN aexpr	        { Statement.Assign($1,$3) }
-| id RANDOM range	        { Statement.Random($1,$3) }
+| ID ASSIGN aexpr	        { Statement.Assign($1,$3) }
+| ID RANDOM range	        { Statement.Random($1,$3) }
 | stmt SEMICOL stmt	        { Statement.Sequence($1,$3) }
 | IF bexpr THEN stmt ELSE stmt FI { Statement.If($2,$4,$6) }
 | WHILE bexpr DO stmt OD        { Statement.While($2,$4) }

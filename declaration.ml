@@ -10,7 +10,7 @@ type id =
 ;;
 
 type meta =
-    Var of range
+    Variable of range
     (* add constants and arrays later? *)
 ;;
 
@@ -65,7 +65,7 @@ let rec allocate st ds dt =
     [] -> dt
   | d::dss ->  
       match d with
-         (x, Var(_)) -> 
+         (x, Variable(_)) -> 
 	   let nt = add_alloc x st dt
 	   in allocate (st+1) dss nt
 ;;
@@ -73,7 +73,10 @@ let rec allocate st ds dt =
 (***********************************************************************)
 (* Generic Output                                                      *)
 (***********************************************************************)
+let output_range outch rng =
+  output_string outch (String.concat ", " (List.map string_of_int rng))
 
+  (*
 let rec output_range outch rng =
   match rng with
   | []   -> output_string outch ""
@@ -83,12 +86,13 @@ let rec output_range outch rng =
       output_string outch ", "; 
       output_range outch tl
 ;;
+*)
 
 let output_decl outch (id,m) =
   output_string outch id;
   begin 
     match m with
-    | Var(r) -> 
+    | Variable(r) -> 
         output_string outch ": range {";
         output_range outch r;
         output_string outch "}"
@@ -167,20 +171,31 @@ let julia_decls decls =
   julia_string "=#\n"
 ;;
 
+let julia_id2ord (id,m) i =
+  julia_string "\t\"";
+  julia_string id;
+  julia_string "\" => ";
+  julia_int i;
+  julia_string ",\n";
+;;
+
+let julia_ids2ord decls =
+  julia_string "const id2ord = Dict(\n";
+  List.iter2 julia_id2ord decls (interval 1 (List.length decls));
+  julia_string ")\n";
+;;
+
 let julia_id2rng (id,m) =
   julia_string "\t\"";
   julia_string id;
-  julia_string "\"";
-  julia_string " => ";
-  match m with
-  | Var(r) -> 
-      begin
-        julia_string "range(";
-        julia_int (List.hd r);
-        julia_string ",";
-        julia_int (List.length r);
-        julia_string "),\n"
-      end
+  julia_string "\" => ";
+  begin
+    match m with
+    | Variable(r) -> 
+        julia_string "[";
+        julia_string (String.concat ", " (List.map string_of_int r));
+        julia_string "],\n"
+  end
 ;;
 
 let julia_ids2rng decls =
@@ -189,37 +204,68 @@ let julia_ids2rng decls =
   julia_string ")\n";
 ;;
 
+let julia_ord2rng (id,m) i =
+  julia_string "\t";
+  julia_int i;
+  julia_string " => ";
+  begin
+    match m with 
+    | Variable(r) ->
+        julia_string "[";
+        julia_string (String.concat ", " (List.map string_of_int r));
+        julia_string "],\n"
+  end
+;;
+
+let julia_ords2rng decls =
+  julia_string "const ord2rng = Dict(\n";
+  List.iter2 julia_ord2rng decls (interval 1 (List.length decls));
+  julia_string ")\n";
+;;
+
 let julia_variables decls = 
   if !flagJulia then 
     begin
-      julia_string "# Linear operator semantics";
+      julia_string "include(\"../../LOS.jl\") # Linear operator semantics";
 
-      julia_seperator ();
+      julia_separator ();
 
       julia_string "# Generated from ";
       julia_string !srcName;
       julia_string " by pWhile compiler - (c) 2016 H.Wiklicky, M.Olejnik\n";
 
-      julia_seperator ();
+      julia_separator ();
 
       julia_decls decls;
 
-      julia_seperator ();
+      julia_separator ();
 
       julia_ids2rng decls;
 
-      julia_seperator ();
+      julia_separator ();
+
+      julia_ids2ord decls;
+
+      julia_separator ();
+
+      julia_ords2rng decls;
+
+      julia_separator ();
 
       julia_string "const v = ";
       julia_int (List.length decls);
       julia_string " # number of variables\n\n";
 
-      julia_string "const dim = map(length, values(id2rng))\n\n";
+      julia_string "const dims = ";
+      julia_string "convert(Array{Int,1}, map(length, values(id2rng)))\n\n";
       
-      julia_string "const d = prod(dim)\n\n";
+      julia_string "const d = prod(dims)\n\n";
       
-      julia_seperator ();
+      julia_separator ();
 
+      julia_string "# Translation of declarations finished\n";
+
+      julia_separator ();
     end
 ;;
 

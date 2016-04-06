@@ -7,8 +7,8 @@ type stmt =
      Stop
    | Skip
    | TaggedStmt of tag * stmt
-   | Assign of aexpr * aexpr
-   | Random of aexpr * range
+   | Assign of id * aexpr
+   | Random of id * range
    | Sequence of stmt * stmt
    | If of bexpr * stmt * stmt
    | While of bexpr * stmt 
@@ -25,7 +25,6 @@ and tag =
     string
 and weight =
     int
-and dup = string
 ;;
 
 (** Auxilliary: re-normalise alternatives *)
@@ -47,10 +46,10 @@ let rec output_stmt outch s =
   | TaggedStmt(l,s) -> output_string outch l;
                     output_string outch " : ";
                     output_stmt outch s
-  | Assign(x,a) ->  output_aexpr outch x;
+  | Assign(x,a) ->  output_string outch x;
                     output_string outch ":=";
                     output_aexpr outch a
-  | Random(x,r) ->  output_aexpr outch x;
+  | Random(x,r) ->  output_string outch x;
                     output_string outch " ?= { ";
                     output_range outch r;
                     output_string outch " }"
