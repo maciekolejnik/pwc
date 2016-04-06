@@ -1,0 +1,4 @@
+.PHONY: test
+
+test: 
+	julia -e 'include("testLOS.jl"); test()'
