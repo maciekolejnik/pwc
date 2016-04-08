@@ -107,79 +107,23 @@ let print_blocks bs = output_blocks stdout bs
 (** Julia Output                                                       *)
 (***********************************************************************)
 
-type operator =
-  | Filter of label * bool
-  | UpdateExpr of id * label
-  | UpdateConst of id * string
-  | UpdateRnd of id * range  
-  | Id 
-  | Other of label
-
-(***********************************************************************)
-
-(** Deprecated *)
-let rec output_operator outch op =
-  match op with
-  | Filter(l,b) -> 
-      output_string outch "P(dims, test";
-      output_int outch l;
-      output_string outch ", ";
-      output_bool outch b;
-      output_string outch ")";
-  | UpdateExpr(id,l) ->
-      output_string outch "Ue(dims, id2ord[\"";
-      output_string outch id;
-      output_string outch "\"], assign";
-      output_int outch l;
-      output_string outch ")"
-  | UpdateConst(id,i) ->
-      output_string outch "Uc(dims, id2ord[\"";
-      output_string outch id;
-      output_string outch "\"], ";
-      output_string outch i;
-      output_string outch ")"
-  | UpdateRnd(id,r) ->
-      output_string outch "Ur(dims, id2ord[\"";
-      output_string outch id;
-      output_string outch "\"], id2rng[\"";
-      output_string outch id;
-      output_string outch "\"], [";
-      output_range outch r ;
-      output_string outch "])"
-  | Id ->
-      output_string outch "I(d)"
-  | Other(l) ->
-      output_string outch "other"
-;;
-
-(***********************************************************************)
-(** Generate state update and filter operators corresponding to blocks *)
-(***********************************************************************)
-
-let blk2ops (l,b) =
-  match b with
-  | BTest(_) ->  [Filter(l,true); Filter(l,false); Other(l)]
-  | BAsn(x,a) -> [UpdateExpr(x,l)]
-  | BRnd(x,r) -> [UpdateRnd(x,r)]
-  | _ -> [Id]
-;;
-
-let blk2ids (l,b) =
-  let s = string_of_int l in
-  match b with 
-  | BTest(_) -> [s ^ "t"; s ^ "f"; s]
-  | _ -> [s]
-;;
-
-let id2ord id = "id2ord[\"" ^ id ^ "\"]"
-and id2rng id = "id2rng[\"" ^ id ^ "\"]"
+(** Several auxiliary functions to make string building process sligthly
+ * less painful 
+ * Conventions for variable names:
+   * r = range
+   * l = label (converted to string already)
+   * b = boolean
+   * id = identifier [ie variable name]
+ *)
+let id2ord id = "id2ord[" ^ in_quotes id ^ "]"
+and id2rng id = "id2rng[" ^ in_quotes id ^ "]"
 ;; 
 
 let fraction r = "1//" ^ string_of_int (List.length r)
 ;;
 
-let p l b   = "P(dims, test" ^ string_of_int l ^ ", " ^ string_of_bool b ^ ")"
-and ue id l = "Ue(dims, " ^ id2ord id ^ ", " ^ "assign" ^ string_of_int l ^")"
+let p l b   = "P(dims, test" ^ l ^ ", " ^ string_of_bool b ^ ")"
+and ue id l = "Ue(dims, " ^ id2ord id ^ ", " ^ "assign" ^ l ^")"
 and uc id i = "Uc(dims, " ^ id2ord id ^ ", " ^ i ^ ")"
 and ff id i = "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
 ;;
@@ -190,37 +134,45 @@ let ucs id r = List.map (fun i -> uc id (ff id (string_of_int i))) r
 let ur id r = fraction r ^ " * (" ^ (String.concat " +\n\t" (ucs id r))  ^ ")" 
 ;;
 
-let rec op_to_string op =
-  match op with 
-  | Filter(l,b) -> p l b
-  | UpdateExpr(id,l) -> ue id l
-  | UpdateConst(id,i) -> uc id i
-  | UpdateRnd(id,r) -> ur id r
-  | Id -> "I(d)"
-  | Other(l) -> "F" ^ string_of_int l ^ "f"
-;;
+(***********************************************************************)
 
-
-let julia_operator id op =
-  julia_string "F";
-  julia_string id;
-  julia_string " = ";
-  julia_string (op_to_string op);
-  (*output_operator !fidJulia op;*)
-  julia_string "\n"
+(**
+ *     julia_operator (l,blk)
+ *
+ * Write to the julia file operator(s) corresponding to block
+ * `blk`, labelled `l`. 
+ *)
+let julia_operator (l,blk) =
+  let l = string_of_int l in
+  let fl = "const F" ^ l in
+  match blk with
+  | BTest(b) ->
+      julia_assignment (fl ^ "t") (p l true);
+      julia_assignment (fl ^ "f") (p l false);
+      julia_assignment (fl) (fl ^ "f")
+  | BAsn(x,a) ->
+      julia_assignment fl (ue x l) 
+  | BRnd(x,r) ->
+      julia_assignment fl (ur x r)
+  | _ -> 
+      julia_assignment fl "Id(d)" 
 ;;
 
 let julia_operators blocks =
-  List.iter2 julia_operator (List.flatten (List.map blk2ids blocks))
-                            (List.flatten (List.map blk2ops blocks))   
+  List.iter julia_operator blocks
 ;;
 
 (***********************************************************************)
-(** Generate helper functions (tests, assignments) for operators above *)
-(***********************************************************************)
 
-let julia_helper (l,b) =
-  match b with
+
+(**
+ *     julia_helper (l,b)
+ *
+ * Generate helper functions (tests, assignments) for operators above 
+ * corresponding to block `blk`, labelled `l`
+ * *)
+let julia_helper (l,blk) =
+  match blk with
   | BTest(b) -> 
       let name = "test" ^ string_of_int l
       and b = "return " ^ bexpr_to_julia_string b 
@@ -232,16 +184,27 @@ let julia_helper (l,b) =
   | _ -> ()
 ;;
 
+let julia_helpers blocks =
+  List.iter julia_helper blocks
+;;
+
+(***********************************************************************)
+
 let julia_blocks_number blocks =
   julia_string "const b = ";
   julia_int (List.length blocks);
   julia_string " # number of blocks\n"
 ;;
 
-let julia_helpers blocks =
-  List.iter julia_helper blocks
-;;
-
+(**
+ *     julia_blocks blocks
+ *
+ * @param `blocks` list of labeled blocks (ie pairs (label, block))
+ *
+ * Main julia output function in this file, writes the number of 
+ * blocks and state update + filter operators with corresponding
+ * test and assignment functions to the julia file. 
+ *)
 let julia_blocks blocks =
   julia_separator ();
   julia_string "# Translation of blocks\n";

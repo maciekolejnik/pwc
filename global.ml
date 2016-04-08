@@ -87,6 +87,13 @@ let julia_function name args lines =
   julia_string "\nend\n\n"
 ;;
 
+let julia_assignment lhs rhs =
+  julia_string lhs;
+  julia_string " = ";
+  julia_string rhs;
+  julia_newline ()
+;;
+
 let in_quotes id = 
   "\"" ^ id ^ "\""
 ;;
