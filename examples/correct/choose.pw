@@ -1,0 +1,7 @@
+var 
+  x : {0,1};
+
+begin
+choose 2: x:=0 or 2: x:=1 ro;
+stop
+end
