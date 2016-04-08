@@ -10,7 +10,7 @@ type id =
 ;;
 
 type meta =
-    Variable of range
+    Primitive of range
     (* add constants and arrays later? *)
 ;;
 
@@ -24,79 +24,49 @@ type decls =
 
 (***********************************************************************)
 
+(* TODO: SOMETHING BETTER HERE? *)
 let minInt = -4 (* truncates integers *)
 and maxInt =  4 (* truncates integers *)
 ;;
 
 (***********************************************************************)
-(** Auxilliary functions                                               *)
+(** Auxiliary                                                          *)
 (***********************************************************************)
 
-(** Creates list of integers [a..b] *)
-(*let rec interval a b =
-  if a>b then [] else a::(interval (a+1) b) 
-*)
-(*  
-let interval a b =
-  let rec adduntil lb il =
-    let i = List.hd il in 
-    if lb >= i                 (* lower bound lb above head of il *)
-    then il                    (* done, return integer list il *)
-    else adduntil lb (i-1::il) (* put i-1 in il and continue *)
-  in 
-  if a>b
-  then []              (* empty interval *)
-  else adduntil a [b]  (* add to interval starting with [b] *)
-;;
-*)
-
-(***********************************************************************)
-(* Allocate variables in ds -> (id,start)                              *)
-(***********************************************************************)
-(** IS THIS NEEDED - DELETE IF NECESSARY *)
-(* allocations = existsing allocation table *)
-
-let add_alloc identifier start allocations =
-    allocations @ [(identifier, start)]
-;;
-
-let rec allocate st ds dt =
-  match ds with
-    [] -> dt
-  | d::dss ->  
-      match d with
-         (x, Variable(_)) -> 
-	   let nt = add_alloc x st dt
-	   in allocate (st+1) dss nt
+let range_of_variable meta =
+  match meta with 
+  | Primitive(r) -> r
 ;;
 
 (***********************************************************************)
 (* Generic Output                                                      *)
 (***********************************************************************)
-let output_range outch rng =
-  output_string outch (String.concat ", " (List.map string_of_int rng))
 
-  (*
-let rec output_range outch rng =
-  match rng with
-  | []   -> output_string outch ""
-  | [hd] -> output_int outch hd   
-  | hd::tl -> 
-      output_int outch hd;
-      output_string outch ", "; 
-      output_range outch tl
+let range_to_string rng = 
+  String.concat ", " (List.map string_of_int rng)
 ;;
-*)
+
+let range_in_square_brackets rng =
+  "[" ^ range_to_string rng ^ "]"
+;;
+
+let meta_to_string meta =
+  match meta with
+  | Primitive(r) ->
+      let r = range_to_string r
+      in  "range {" ^ r ^ "}"
+;;
+
+(***********************************************************************)
+
+let output_range outch rng =
+  output_string outch (range_to_string rng)
+;;
 
 let output_decl outch (id,m) =
   output_string outch id;
-  begin 
-    match m with
-    | Variable(r) -> 
-        output_string outch ": range {";
-        output_range outch r;
-        output_string outch "}"
-  end;
+  output_string outch " : ";
+  output_string outch (meta_to_string m);
   output_newline outch
 ;;
 
@@ -115,115 +85,71 @@ let output_decls outch ds =
 let print_decls ds = output_decls stdout ds
 ;;
 
-(*
-let print_decls ds =
-  let print_decl (id,d) =
-    let print_range rng = output_range stdout rng
-    in 
-    begin
-      print_string id;
-      begin
-	match d with
-	  Parameter -> print_string " parameter"  (******************)
-	| Range(r) -> print_string " in {";
-	    print_range r;
-	    print_string "}"
-	| Array(n,r) -> print_string " [1..";
-	    print_int n;
-	    print_string "] in {";
-	    print_range r;
-	    print_string "}";
-      end;
-      print_newline ();
-    end
-  in
-  begin
-    print_newline ();
-    print_string "Identifiers:";
-    print_newline ();
-    List.iter print_decl ds;
-    print_newline ();
-  end
-;;
-*)
-(***********************************************************************)
-
-(* NOT NEEDED RIGHT NOW IS IT??
-let print_alloc (i,s) =
-  print_string i;
-  print_string " starts at ";
-  print_int s;
-  print_newline ()
-;;
-
-let print_allocation atable =
-    List.map print_alloc atable
-;;
-*)
 
 (***********************************************************************)
 (** Julia Output                                                       *)
 (***********************************************************************)
 
-let julia_decls decls = 
-  julia_string "#=\n";
-  output_decls !fidJulia decls;
-  julia_string "=#\n"
+
+(**
+ *     julia_dict name entries 
+ *
+ * @param `name` name of the dictionary
+ * @param `entries` list of (key,value) pairs 
+ *
+ * Declare a dictionary `name` in a julia file with 
+ * entries `entries`
+ *)
+let julia_dict name entries =
+  julia_string "const ";
+  julia_string name;
+  julia_string " = Dict(\n\t";
+  julia_string (String.concat ",\n\t" (List.map dict_entry entries));
+  julia_string "\n)\n"
 ;;
 
-let julia_id2ord (id,m) i =
-  julia_string "\t\"";
-  julia_string id;
-  julia_string "\" => ";
-  julia_int i;
-  julia_string ",\n";
+(***********************************************************************)
+
+let id2ord (id,m) i =
+  (in_quotes id, string_of_int i)
 ;;
 
 let julia_ids2ord decls =
-  julia_string "const id2ord = Dict(\n";
-  List.iter2 julia_id2ord decls (interval 1 (List.length decls));
-  julia_string ")\n";
+  julia_dict "id2ord" (List.map2 id2ord decls (interval 1 (List.length decls)));
 ;;
 
-let julia_id2rng (id,m) =
-  julia_string "\t\"";
-  julia_string id;
-  julia_string "\" => ";
-  begin
-    match m with
-    | Variable(r) -> 
-        julia_string "[";
-        julia_string (String.concat ", " (List.map string_of_int r));
-        julia_string "],\n"
-  end
+(***********************************************************************)
+
+let id2rng (id,m) =
+  (in_quotes id, range_in_square_brackets (range_of_variable m))
 ;;
 
 let julia_ids2rng decls =
-  julia_string "const id2rng = Dict(\n";
-  List.iter julia_id2rng decls;
-  julia_string ")\n";
+  julia_dict "id2rng" (List.map id2rng decls);
 ;;
 
-let julia_ord2rng (id,m) i =
-  julia_string "\t";
-  julia_int i;
-  julia_string " => ";
-  begin
-    match m with 
-    | Variable(r) ->
-        julia_string "[";
-        julia_string (String.concat ", " (List.map string_of_int r));
-        julia_string "],\n"
-  end
+(***********************************************************************)
+
+let ord2rng (id,m) i =
+  (string_of_int i, range_in_square_brackets (range_of_variable m))
 ;;
 
 let julia_ords2rng decls =
-  julia_string "const ord2rng = Dict(\n";
-  List.iter2 julia_ord2rng decls (interval 1 (List.length decls));
-  julia_string ")\n";
+  julia_dict "ord2rng" (List.map2 ord2rng decls (interval 1 (List.length decls)));
 ;;
 
-let julia_variables decls = 
+(** 
+ *    julia_decls decls
+ * 
+ * @param `decls` lsit of declarations ie list of (id, meta) pairs
+ *         where `id` is the variable identifier and `meta` is the
+ *         metadata of that variable
+ *
+ * Main julia output function, prints all the relevant things
+ * to the julia file, including variable mappings (id => range, 
+ * id => ordinal, ordinal => range) and several constants used later
+ *)
+let julia_decls decls = 
   if !flagJulia then 
     begin
       julia_string "include(\"../../LOS.jl\") # Linear operator semantics";
@@ -233,10 +159,6 @@ let julia_variables decls =
       julia_string "# Generated from ";
       julia_string !srcName;
       julia_string " by pWhile compiler - (c) 2016 H.Wiklicky, M.Olejnik\n";
-
-      julia_separator ();
-
-      julia_decls decls;
 
       julia_separator ();
 

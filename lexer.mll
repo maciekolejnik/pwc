@@ -9,13 +9,20 @@
       lexbuf.lex_curr_p <- {
       lexbuf.lex_curr_p with pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 
+  let rational_of_string s =
+    let r = (Str.split (Str.regexp "/") s) in
+    let p = int_of_string (String.trim (List.nth r 0))
+    and q = int_of_string (String.trim (List.nth r 1))
+    in  (p,q)
 }
 
 (***********************************************************************)
 
-let blank  = ' ' | '\t' | '\r'
-let number = ['0'-'9'] +
-let name   = ['A' - 'Z' 'a'-'z' '_' '/' '0'-'9' '\'' '?'] +
+let blank = [' ' '\t']+
+let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let nonzero = ['1'-'9']['0'-'9']*
+let number = '0' | nonzero  
+let rational = number blank* '/' blank* nonzero
 
 (***********************************************************************)
 
@@ -104,7 +111,8 @@ rule token = parse
 | "inf"	             { INFINTE }
 
 | number as n        { NUM (int_of_string n) }
-| name as n          { ID n }
+| rational as r      { RAT (rational_of_string r) }
+| id as id           { ID id }
 
 | eof                { raise EOF }
 

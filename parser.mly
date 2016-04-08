@@ -36,6 +36,7 @@
 
 %token <int> NUM
 %token <string> ID
+%token <int*int> RAT
 
 %token EOF
 
@@ -77,7 +78,7 @@ decls:
 ;
 
 decl:
-  ID COLON range		{ [($1, Declaration.Variable($3))] }
+  ID COLON range		{ [($1, Declaration.Primitive($3))] }
 ;
 
 /***********************************************************************/
@@ -148,7 +149,7 @@ cond:
 stmt:
   BEGIN stmt END		{ $2 }
 | stmt SEMICOL		        { $1 }
-| ID COLON stmt %prec LABEL     { Statement.TaggedStmt($1,$3) }
+| ID COLON stmt %prec LABEL     { Statement.Tagged($1,$3) }
 | STOP			        { Statement.Stop }
 | SKIP			        { Statement.Skip }
 | ID ASSIGN aexpr	        { Statement.Assign($1,$3) }
@@ -160,7 +161,7 @@ stmt:
   DO stmt OD                    { Statement.For($2,$4,$6,$8) }
 | CASE aexpr cases default ESAC { Statement.Case($2,$3,$4) }
 | REPEAT stmt UNTIL cond        { Statement.Repeat($2,$4) }
-| CHOOSE alts RO                { Statement.Choose($2) }
+| CHOOSE alts RO                { Statement.Choose(Statement.normalise $2) }
 | GOTO ID                       { Statement.Goto($2) }
 ;
 
@@ -180,7 +181,11 @@ alts:
 ;
 
 alt:
-  NUM COLON stmt		{ ($1,$3) }
+  weight COLON stmt		{ ($1,$3) }
 ;
+
+weight:
+  NUM                           { ($1, 1) }
+| RAT                           { $1 }
 
 /***********************************************************************/

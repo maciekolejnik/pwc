@@ -33,105 +33,171 @@ type bexpr =
 (** Generic Output                                                     *)
 (***********************************************************************)
 
-let rec output_aexpr outch e =
-  match e with 
-    Const(v) ->   output_int outch v
-  | Var(v) ->     output_string outch v
-  | Minus(e) ->   output_string outch "(-";
-                  output_aexpr outch e;
-                  output_string outch ")"
-  | Sum(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "+"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | Diff(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "-"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | Prod(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "*"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | Div(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "/"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | Mod(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "%"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | BXor(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "$"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | BAnd(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "&"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
-  | BOr(e1,e2) -> output_string outch "("; 
-                  output_aexpr outch e1; 
-                  output_string outch "|"; 
-                  output_aexpr outch e2; 
-                  output_string outch ")"
+(**
+ *     asp
+ *
+ * Special printer data structure for aexpr 
+ *)
+type asp =
+  {  const_sp : (int -> string) option;
+     var_sp   : (string -> string) option;
+     minus_sp : (aexpr -> string) option;
+     sum_sp   : (aexpr * aexpr -> string) option;
+     diff_sp  : (aexpr * aexpr -> string) option;
+     prod_sp  : (aexpr * aexpr -> string) option;
+     div_sp   : (aexpr * aexpr -> string) option;
+     mod_sp   : (aexpr * aexpr -> string) option;
+     bxor_sp  : (aexpr * aexpr -> string) option;
+     band_sp  : (aexpr * aexpr -> string) option;
+     bor_sp   : (aexpr * aexpr -> string) option;
+  }
+;;
+
+let default_asp =
+  {  const_sp = None;  
+     var_sp   = None;  
+     minus_sp = None;  
+     sum_sp   = None;  
+     diff_sp  = None; 
+     prod_sp  = None; 
+     div_sp   = None;  
+     mod_sp   = None;  
+     bxor_sp  = None;  
+     band_sp  = None;  
+     bor_sp   = None;  
+  }
+;;
+
+(**
+ *     aexpr_to_string ?aspo aexpr
+ *
+ * Return the string representation of `aexpr`, using 
+ * the aexpr special printer `aspo` if present
+ *)
+let rec aexpr_to_string ?aspo aexpr = 
+  let asp = some_or_default aspo default_asp in
+  let infix_operator sp op e1 e2 = 
+    let e1s = aexpr_to_string ~aspo:asp e1 
+    and e2s = aexpr_to_string ~aspo:asp e2
+    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
+  match aexpr with 
+  | Const(c) -> 
+      to_string asp.const_sp c (string_of_int c)
+  | Var(v) ->  
+      to_string asp.var_sp v v
+  | Minus(e) ->   
+      let es = aexpr_to_string ~aspo:asp e
+      in  to_string asp.minus_sp e ("(- " ^ es ^ ")")
+  | Sum(e1,e2) -> 
+      infix_operator asp.sum_sp "+" e1 e2
+  | Diff(e1,e2) -> 
+      infix_operator asp.diff_sp "-" e1 e2
+  | Prod(e1,e2) -> 
+      infix_operator asp.prod_sp "*" e1 e2
+  | Div(e1,e2) -> 
+      infix_operator asp.div_sp "/" e1 e2
+  | Mod(e1,e2) ->
+      infix_operator asp.mod_sp "%" e1 e2
+  | BXor(e1,e2) -> 
+      infix_operator asp.bxor_sp "$" e1 e2
+  | BAnd(e1,e2) ->
+      infix_operator asp.band_sp "&" e1 e2
+  | BOr(e1,e2) -> 
+      infix_operator asp.bor_sp "|" e1 e2
 ;;
 
 (***********************************************************************)
 	
-let rec output_bexpr outch e =
-  match e with 
-    True ->       output_string outch "true"
-  | False ->      output_string outch "false"
-  | Not(e) ->     output_string outch "~";
-                  output_bexpr outch e
-  | And(e1,e2) -> output_string outch "(";
-                  output_bexpr outch e1;
-                  output_string outch "&";
-                  output_bexpr outch e2;
-                  output_string outch ")"
-  | Or(e1,e2) ->  output_string outch "(";
-                  output_bexpr outch e1;
-                  output_string outch "|";
-                  output_bexpr outch e2;
-                  output_string outch ")"
-  | Lesser(e1,e2) ->  output_string outch "(";
-                  output_aexpr outch e1;
-                  output_string outch "<";
-                  output_aexpr outch e2;
-                  output_string outch ")"
-  | LeEqual(e1,e2) ->  output_string outch "(";
-                  output_aexpr outch e1;
-                  output_string outch "<=";
-                  output_aexpr outch e2;
-                  output_string outch ")"
-  | Equal(e1,e2) ->  output_string outch "(";
-                  output_aexpr outch e1;
-                  output_string outch "==";
-                  output_aexpr outch e2;
-                  output_string outch ")"
-  | GrEqual(e1,e2) ->  output_string outch "(";
-                  output_aexpr outch e1;
-                  output_string outch ">=";
-                  output_aexpr outch e2;
-                  output_string outch ")"
-  | Greater(e1,e2) ->  output_string outch "(";
-                  output_aexpr outch e1;
-                  output_string outch ">";
-                  output_aexpr outch e2;
-                  output_string outch ")"
+(**
+ *     bsp
+ *
+ * Special printer data structure for bexpr 
+ *)
+type bsp =
+  {  true_sp    : (unit -> string) option;
+     false_sp   : (unit -> string) option;
+     not_sp     : (bexpr -> string) option;
+     and_sp     : (bexpr * bexpr -> string) option;
+     or_sp      : (bexpr * bexpr -> string) option;
+     lesser_sp  : (aexpr * aexpr -> string) option;
+     lequal_sp  : (aexpr * aexpr -> string) option;
+     equal_sp   : (aexpr * aexpr -> string) option;
+     grequal_sp : (aexpr * aexpr -> string) option;
+     greater_sp : (aexpr * aexpr -> string) option;
+  }
 ;;
+
+let default_bsp =
+  {  true_sp    = None;  
+     false_sp   = None;  
+     not_sp     = None;  
+     and_sp     = None;  
+     or_sp      = None; 
+     lesser_sp  = None; 
+     lequal_sp  = None;  
+     equal_sp   = None;  
+     grequal_sp = None;  
+     greater_sp = None;  
+  }
+;;
+
+(**
+ *     bexpr_to_string ?aspo ?bspo bexpr
+ *
+ * Return the string representation of `bexpr`, using 
+ * the aexpr special printer `aspo` and bexpr special
+ * printer `bspo` if present
+ *)
+let rec bexpr_to_string ?aspo ?bspo bexpr = 
+  let asp = some_or_default aspo default_asp 
+  and bsp = some_or_default bspo default_bsp in
+  let aexpr_infix_operator sp op e1 e2 = 
+    let e1s = aexpr_to_string ~aspo:asp e1 
+    and e2s = aexpr_to_string ~aspo:asp e2
+    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") 
+  and bexpr_infix_operator sp op e1 e2 = 
+    let e1s = bexpr_to_string ~aspo:asp ~bspo:bsp e1 
+    and e2s = bexpr_to_string ~aspo:asp ~bspo:bsp e2
+    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
+  match bexpr with 
+  | True -> 
+      to_string bsp.true_sp () "true"
+  | False ->  
+      to_string bsp.false_sp () "false"
+  | Not(e) ->   
+      let es = bexpr_to_string ~aspo:asp ~bspo:bsp e
+      in  to_string bsp.not_sp e ("(- " ^ es ^ ")")
+  | And(e1,e2) -> 
+      bexpr_infix_operator bsp.and_sp "&&" e1 e2
+  | Or(e1,e2) -> 
+      bexpr_infix_operator bsp.or_sp "||" e1 e2
+  | Lesser(e1,e2) -> 
+      aexpr_infix_operator bsp.lesser_sp "<" e1 e2
+  | LeEqual(e1,e2) -> 
+      aexpr_infix_operator bsp.lequal_sp "=<" e1 e2
+  | Equal(e1,e2) ->
+      aexpr_infix_operator bsp.equal_sp "==" e1 e2
+  | GrEqual(e1,e2) -> 
+      aexpr_infix_operator bsp.grequal_sp ">=" e1 e2
+  | Greater(e1,e2) ->
+      aexpr_infix_operator bsp.greater_sp ">" e1 e2
+;;
+
+(***********************************************************************)
+
+(** Default output *)
+let output_aexpr outch e = output_string outch (aexpr_to_string e)
+;;
+
+let output_bexpr outch e = output_string outch (bexpr_to_string e)
+;;
+
 
 (***********************************************************************)
 (** Text Output                                                        *)
 (***********************************************************************)
 
-let print_aexpr e = output_aexpr stdout e
+let print_aexpr e = output_aexpr stdout e 
 ;;
 	
 let print_bexpr e = output_bexpr stdout e
@@ -141,115 +207,56 @@ let print_bexpr e = output_bexpr stdout e
 (** Julia Output                                                       *)
 (***********************************************************************)
 
-let rec julia_aexpr aexpr =
-  match aexpr with 
-  | Var(v) ->
-      julia_string "values[id2ord[\"";
-      julia_string v;
-      julia_string "\"]]"
-  | Div(e1, e2) ->
-      julia_string "div(";
-      julia_aexpr e1;
-      julia_string ", ";
-      julia_aexpr e2;
-      julia_string ")"
-  | _ -> 
-      output_aexpr !fidJulia aexpr
+
+(**
+ *     asp (aexpr special printer)
+ *
+ * Overwrites the default printing with julia specific ways of printing
+ * variables and division
+ *)
+let rec asp = 
+  { default_asp with 
+    var_sp = (Some var); 
+    div_sp = (Some div);
+  }
+and var v = "values[id2ord[\"" ^ v ^ "\"]]" 
+and div (e1,e2) = 
+  let e1 = aexpr_to_string ~aspo:asp e1
+  and e2 = aexpr_to_string ~aspo:asp e2 
+  in "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
 ;;
 
-let rec julia_aexpr e =
-  match e with 
-    Const(v) ->   julia_int v
-  | Var(v) ->     julia_string "id2rng[\"";
-                  julia_string v;
-                  julia_string "\"][";
-                  julia_string "values[id2ord[\"";
-                  julia_string v;
-                  julia_string "\"]]]"
-  | Minus(e) ->   julia_string "(-";
-                  julia_aexpr e;
-                  julia_string ")"
-  | Sum(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "+"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | Diff(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "-"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | Prod(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "*"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | Div(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "/"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | Mod(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "%"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | BXor(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "$"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | BAnd(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "&"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
-  | BOr(e1,e2) -> julia_string "("; 
-                  julia_aexpr e1; 
-                  julia_string "|"; 
-                  julia_aexpr e2; 
-                  julia_string ")"
+let aexpr_to_julia_string e =
+  aexpr_to_string ~aspo:asp e
 ;;
 
-let rec julia_bexpr e =
-  match e with 
-    True ->       julia_string "true"
-  | False ->      julia_string "false"
-  | Not(e) ->     julia_string "~";
-                  julia_bexpr e
-  | And(e1,e2) -> julia_string "(";
-                  julia_bexpr e1;
-                  julia_string "&";
-                  julia_bexpr e2;
-                  julia_string ")"
-  | Or(e1,e2) ->  julia_string "(";
-                  julia_bexpr e1;
-                  julia_string "|";
-                  julia_bexpr e2;
-                  julia_string ")"
-  | Lesser(e1,e2) ->  julia_string "(";
-                  julia_aexpr e1;
-                  julia_string "<";
-                  julia_aexpr e2;
-                  julia_string ")"
-  | LeEqual(e1,e2) ->  julia_string "(";
-                  julia_aexpr e1;
-                  julia_string "<=";
-                  julia_aexpr e2;
-                  julia_string ")"
-  | Equal(e1,e2) ->  julia_string "(";
-                  julia_aexpr e1;
-                  julia_string "==";
-                  julia_aexpr e2;
-                  julia_string ")"
-  | GrEqual(e1,e2) ->  julia_string "(";
-                  julia_aexpr e1;
-                  julia_string ">=";
-                  julia_aexpr e2;
-                  julia_string ")"
-  | Greater(e1,e2) ->  julia_string "(";
-                  julia_aexpr e1;
-                  julia_string ">";
-                  julia_aexpr e2;
-                  julia_string ")"
+let bexpr_to_julia_string e =
+  bexpr_to_string ~aspo:asp e
 ;;
+
+(** 
+ *     julia_aexpr e
+ *
+ *  Writes arithmetic expression `e` to the julia file.
+ *
+ *  Uses special printer `asp` defiend above to overwrite the 
+ *  default way of printing (in this case) variables and 
+ *  division operation
+ *)
+let julia_aexpr e = 
+  julia_string (aexpr_to_string ~aspo:asp e)
+;;
+
+(** 
+ *     julia_bexpr e
+ *
+ *  Writes boolean expression `e` to the julia file.
+ *
+ *  Uses special printer `asp` defiend above to overwrite the 
+ *  default way of printing (in this case) variables and 
+ *  division operation
+ *)
+let julia_bexpr e =
+  julia_string (bexpr_to_string ~aspo:asp e)
+;;
+

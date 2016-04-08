@@ -5,9 +5,9 @@ open Statement
 
 
 type lstmt =
-     LStop of label
+   | LStop of label
    | LSkip of label
-   | LTaggedStmt of tag * lstmt
+   | LTagged of tag * lstmt
    | LAssign of label * id * aexpr
    | LRandom of label * id * range
    | LSequence of lstmt * lstmt
@@ -49,9 +49,9 @@ let rec label_stmt s =
       LSkip(newlabel())
   | Stop ->
       LStop(newlabel())
-  | TaggedStmt(t,s) ->
+  | Tagged(t,s) ->
       let ls = label_stmt s in
-      LTaggedStmt(t,ls)
+      LTagged(t,ls)
   | Assign(x,a) ->
       LAssign(newlabel(),x,a)
   | Random(x,r) ->
@@ -102,6 +102,8 @@ and
 (* Generic Output                                                      *)
 (***********************************************************************)
 
+(** TODO: THIS IS NOT USED ANYWHERE. DO WE NEED IT ACTUALLY? *)
+
 let rec output_lstmt outch s =
   match s with 
     LStop(l) ->        
@@ -112,7 +114,7 @@ let rec output_lstmt outch s =
       output_string outch "[skip]^";
       output_int outch l;
       output_string outch " "
-  | LTaggedStmt(l,s) ->
+  | LTagged(l,s) ->
       output_string outch l;
       output_string outch ": ";
       output_lstmt outch s
@@ -218,7 +220,7 @@ let rec output_lstmt outch s =
       output_newline outch
 and
 output_wlstmt outch (w,s) =
-  output_int outch w;
+  output_weight outch w "/";
   output_string outch ":";
   output_lstmt outch s;
   output_newline outch
@@ -262,177 +264,4 @@ let print_wlstmts wlsl = output_wlstmts stdout wlsl;;
 let print_clstmt cls = output_clstmt stdout cls;;
 
 let print_clstmts clsl = output_clstmts stdout clsl;;
-
-(*
-let rec print_lstmt s =
-  match s with 
-    LStop(l) ->        
-      print_string "[stop]^";
-      print_int l;
-      print_string " "
-  | LSkip(l) ->        
-      print_string "[skip]^";
-      print_int l;
-      print_string " "
-  | LTaggedStmt(l,s) ->
-      print_string l;
-      print_string ": ";
-      print_lstmt s
-  | LSkipAsn(l,x,a) ->
-      print_string "[skipAsn ";
-      print_aexpr x;
-      print_string " ";
-      print_aexpr a;
-      print_string "]^";
-      print_int l;
-      print_string " "
-  | LSkipIf(l,b,s) ->
-      print_string "if ";
-      print_string "[";
-      print_bexpr b;
-      print_string "]^";
-      print_int l;
-      print_newline ();
-      print_lstmt s;
-      print_newline ();
-      print_string " fi";
-      print_newline ()
-  | LAssign(l,x,a) ->  
-      print_string "[";
-      print_aexpr x;
-      print_string " := ";
-      print_aexpr a;
-      print_string "]^";
-      print_int l;
-      print_string " "
-  | LRandom(l,x,r) ->  
-      print_string "[";
-      print_aexpr x;
-      print_string " ?= ";
-      Declaration.output_range stdout  r;
-      print_string "]^";
-      print_int l;
-      print_string " "
-  | LSequence(s1,s2) -> 
-      print_lstmt s1;
-      print_string "; ";
-      print_newline ();
-      print_lstmt s2
-  | LIf(l,b,s1,s2) ->  
-      print_string "if ";
-      print_string "[";
-      Expression.print_bexpr b;
-      print_string "]^";
-      print_int l;
-      print_newline ();
-      print_string " then ";
-      print_newline ();
-      print_lstmt s1;
-      print_newline ();
-      print_string " else ";
-      print_newline ();
-      print_lstmt s2;
-      print_string " fi";
-      print_newline ()
-  | LWhile(l,b,s) ->   
-      print_string "while ";
-      print_string "[";
-      Expression.print_bexpr b;
-      print_string "]^";
-      print_int l;
-      print_string " do ";
-      print_newline ();
-      print_lstmt s;
-      print_newline ();
-      print_string "od";
-      print_newline ()
-  | LFor(l,i,b,u,s) ->
-      print_string "for ";
-      print_lstmt i;
-      print_string "; [";
-      Expression.print_bexpr b;
-      print_string "]^";
-      print_int l;
-      print_string "; ";
-      print_lstmt u;
-      print_string " do";
-      print_newline ();
-      print_lstmt s;
-      print_newline ();
-      print_string "od";
-      print_newline ()
-  | LCase(a,clsl,ld) ->
-      print_string "case ";
-      Expression.print_aexpr a;
-      print_newline ();
-      print_clstmts clsl;
-      print_string "default: ";
-      print_lstmt ld;
-      print_newline ();
-      print_string "esac";
-      print_newline ()
-  | LRepeat(l,s,b) ->
-      print_string "repeat ";
-      print_newline ();
-      print_lstmt s;
-      print_newline ();
-      print_string "until ";
-      print_string "[";
-      Expression.print_bexpr b;
-      print_string "]^";
-      print_int l;
-      print_newline ()
-  | LChoose(l,wlsl) -> 
-      print_string "[choose]^";
-      print_int l;
-      print_newline ();
-      print_wlstmts wlsl;
-      print_string "ro";
-      print_newline ()
-  | LGoto(l,gl) ->
-      print_string "[goto]^";
-      print_int l;
-      print_string " ";
-      print_string gl;
-      print_newline ()
-and 
-print_wlstmt (p,s) =
-  match p with (***************)
-    CWeight(w) -> print_int w;
-  | PWeight(w) -> print_string w;
-  print_string ":";
-  print_lstmt s;
-  print_newline ()
-and 
-print_wlstmts wlsl =
-  if ((List.length wlsl) > 1) then
-    begin
-    print_wlstmt (List.hd wlsl);
-    print_string "or ";
-    print_newline ();
-    print_wlstmts (List.tl wlsl)
-    end
-  else if ((List.length wlsl) = 1) then
-    begin
-    print_wlstmt (List.hd wlsl);
-    end
-and
-print_clstmt ((l,i),s) =
-  print_string "of [";
-  print_int i;
-  print_string "]^";
-  print_int l;
-  print_string ": ";
-  print_lstmt s;
-  print_newline ()
-and
-print_clstmts clsl =
-  List.iter print_clstmt clsl
-;;
-*)
-
-(***********************************************************************)
-(** Julia Output                                                       *)
-(***********************************************************************)
-
 

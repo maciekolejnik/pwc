@@ -77,6 +77,24 @@ let julia_separator () =
   julia_newline ()
 ;;
 
+let julia_function name args lines =
+  julia_string "function ";
+  julia_string name;
+  julia_string "(";
+  julia_string (String.concat ", " args);
+  julia_string ")\n";
+  julia_string (String.concat "\n" (List.map ((^) "  ") lines));
+  julia_string "\nend\n\n"
+;;
+
+let in_quotes id = 
+  "\"" ^ id ^ "\""
+;;
+
+let dict_entry (k,v) =
+  k ^ " => " ^ v
+;;
+
 (***********************************************************************)
 
 (* Global List of Parameters *)
@@ -98,7 +116,70 @@ let is_para id =
 (** Some auxiliary functions used throughout the code                  *)
 (***********************************************************************)
 
-(** Creates list of integers [a..b] *)
+(** 
+ *     interval a b 
+ *
+ * @param `a` lower bound of the interval
+ * @param `b` upper bound of the interval
+ *
+ * @return list of integers [a..b] 
+ *)
 let rec interval a b =
   if a>b then [] else a::(interval (a+1) b) 
+;;
+
+(** 
+ *     to_string po v d
+ *
+ * @param `po` printing function option 
+ * @param `v` value to be printed
+ * @param `d` default string representation
+ *
+ * @return string representation of `v`
+ *)
+let to_string po v d =
+  match po with
+  | None -> d
+  | Some p -> p v 
+;;
+
+(**
+ *     some_or_default opt def
+ *
+ * @param `opt` is an option of any type ('a option)
+ * @param `def` is the default value
+ *
+ * @return `def` if option is None, `opt` value otherwise
+ *)
+let some_or_default opt def =
+  match opt with
+  | None -> def
+  | Some x -> x
+;;
+
+(** 
+ * The following four functions deal with arithemtic of
+ * (nonnegative) rational numers. They are used to 
+ * renormalise the weights associated with alternatives
+ * of a 'choose' statement, since weights are represented 
+ * as rational numbers
+ *)
+
+let rec gcd a b = 
+  if b = 0 then a else gcd b (a mod b)
+;;
+
+(** Cancel any common factors of p and q *)
+let normalise (p,q) = 
+  let gcd = gcd p q 
+  in (p / gcd, q / gcd) 
+;;
+
+let add (p1,q1) (p2,q2) = 
+  normalise (p1 * q2 + p2 * q1, q1 * q2)
+;;
+
+let divide (p1,q1) (p2,q2) = 
+  normalise (p1 * q2, p2 * q1)
+;;
 

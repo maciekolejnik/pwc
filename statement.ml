@@ -4,9 +4,9 @@ open Expression
 
 
 type stmt = 
-     Stop
+   | Stop
    | Skip
-   | TaggedStmt of tag * stmt
+   | Tagged of tag * stmt
    | Assign of id * aexpr
    | Random of id * range
    | Sequence of stmt * stmt
@@ -19,19 +19,18 @@ type stmt =
    | Goto of tag 
 and wstmt = 
     weight * stmt 
-and cstmt =
-    int * stmt
-and tag =
+and cstmt = (** Case statement *)
+    int * stmt 
+and tag = (** Used for tagged [ie labelled] statements *)
     string
 and weight =
-    int
+    int * int (** weight represented as a positive rational number *)
 ;;
 
-(** Auxilliary: re-normalise alternatives *)
-let renorm alts = 
-  let getw (w1,s1) = w1 in
-  let sum = (List.fold_left (+.) 0.0 (List.map getw alts)) in
-  let norm (w2,s2) = (w2 /. sum,s2) in
+(** Auxilliary: normalise alternatives *)
+let normalise alts = 
+  let sum = (List.fold_left add (0,1) (List.map fst alts)) in
+  let norm (w,s) = (divide w sum,s) in
   List.map norm alts
 ;;
 
@@ -39,201 +38,137 @@ let renorm alts =
 (** Generic Output                                                      *)
 (***********************************************************************)
 
-let rec output_stmt outch s =
-  match s with 
-    Stop ->         output_string outch "stop"
-  | Skip ->         output_string outch "skip"
-  | TaggedStmt(l,s) -> output_string outch l;
-                    output_string outch " : ";
-                    output_stmt outch s
-  | Assign(x,a) ->  output_string outch x;
-                    output_string outch ":=";
-                    output_aexpr outch a
-  | Random(x,r) ->  output_string outch x;
-                    output_string outch " ?= { ";
-                    output_range outch r;
-                    output_string outch " }"
-  | Sequence(s1,s2) -> output_stmt outch s1;
-                    output_string outch "; ";
-                    output_stmt outch s2
-  | If(b,s1,s2) ->  output_string outch "if ";
-                    output_bexpr outch b;
-                    output_string outch " then ";
-                    output_stmt outch s1;
-                    output_string outch " else ";
-                    output_stmt outch s2;
-                    output_string outch " fi"
-  | While(b,s) ->   output_string outch "while ";
-                    output_bexpr outch b;
-                    output_string outch " do ";
-                    output_stmt outch s;
-                    output_string outch " od"
-  | For(i,b,u,s) -> output_string outch "for ";
-                    output_stmt outch i;
-                    output_string outch "; ";
-                    output_bexpr outch b;
-                    output_string outch "; ";
-                    output_stmt outch u;
-                    output_string outch " do ";
-                    output_stmt outch s;
-                    output_string outch "od"
-  | Case(a,l,d) ->  output_string outch "case ";
-                    output_aexpr outch a;
-                    output_cstmts outch l;
-                    output_string outch "default: ";
-                    output_stmt outch d;
-                    output_string outch "esac"
-  | Repeat(s,b) ->  output_string outch "repeat ";
-                    output_stmt outch s;
-                    output_string outch "until ";
-                    output_bexpr outch b
-  | Choose(l) ->    output_string outch "choose ";
-                    output_wstmts outch l;
-                    output_string outch "ro"
-  | Goto(t) ->      output_string outch "goto ";
-                    output_string outch t;
-and 
-output_wstmt outch (p,s) =
-  output_int outch p;
-  output_string outch ":";
-  output_stmt outch s;
-  output_string outch " "
-and 
-output_wstmts outch wsl =
-  if ((List.length wsl) > 1) then
-    begin
-    output_wstmt outch (List.hd wsl);
-    output_string outch "or ";
-    output_string outch " ";
-    output_wstmts outch (List.tl wsl)
-    end
-  else if ((List.length wsl) = 1) then
-    begin
-    output_wstmt outch (List.hd wsl);
-    end
-and
-output_cstmt outch (i,s) =
-  output_string outch "of ";
-  output_int outch i;
-  output_string outch ": ";
-  output_stmt outch s;
-  output_string outch " " 
-and
-output_cstmts outch csl =
-  List.iter (output_cstmt outch) csl
+(**
+ *     weight_to_string (p,q) sep
+ *
+ * Return string representation of `(p,q)`, where `sep` is the character
+ * used to separate `p` and `q`
+ *)
+let weight_to_string (p,q) sep =
+  let ps = string_of_int p
+  and qs = string_of_int q in
+  if q == 1 then ps else ps ^ sep ^ qs
 ;;
 
-(***********************************************************************)
+(**   type ssp (statement special print)
+ * 
+ * Holds special print functions for all different variants of statement
+ * *)
+type ssp = 
+  {  stop_sp     : (unit -> string) option;
+     skip_sp     : (unit -> string) option;
+     tagged_sp   : (tag * stmt -> string) option;
+     assign_sp   : (id * aexpr -> string) option;
+     random_sp   : (id * range -> string) option;
+     sequence_sp : (stmt * stmt -> string) option;
+     if_sp       : (bexpr * stmt * stmt -> string) option;
+     while_sp    : (bexpr * stmt -> string) option;
+     for_sp      : (stmt * bexpr * stmt * stmt -> string) option;
+     case_sp     : (aexpr * cstmt list * stmt -> string) option;
+     repeat_sp   : (stmt * bexpr -> string) option;
+     choose_sp   : (wstmt list -> string) option;
+     goto_sp     : (tag -> string) option;
+  }
+;;
 
+let default_ssp = 
+  {  stop_sp     = None;  
+     skip_sp     = None;   
+     tagged_sp   = None;
+     assign_sp   = None; 
+     random_sp   = None;
+     sequence_sp = None; 
+     if_sp       = None;
+     while_sp    = None;
+     for_sp      = None;
+     case_sp     = None;
+     repeat_sp   = None;
+     choose_sp   = None;
+     goto_sp     = None;
+  }
+;;
+
+let rec stmt_to_string ?sspo ?aspo ?bspo stmt =
+  let ssp = some_or_default sspo default_ssp 
+  and asp = some_or_default aspo default_asp 
+  and bsp = some_or_default bspo default_bsp 
+  in
+  match stmt with 
+  | Stop -> 
+      to_string ssp.stop_sp () "stop"
+  | Skip -> 
+      to_string ssp.skip_sp () "skip"
+  | Tagged(t,s) -> 
+      let ss = stmt_to_string ~sspo:ssp s 
+      in  to_string ssp.tagged_sp (t,s) (t ^ ": " ^ ss)
+  | Assign(x,a) -> 
+      let e = aexpr_to_string ~aspo:asp a
+      in  to_string ssp.assign_sp (x,a) (x ^ " := " ^ e)
+  | Random(x,r) -> 
+      let rs = range_to_string r
+      in  to_string ssp.random_sp (x,r) (x ^ " ?= {" ^ rs ^ "}")
+  | Sequence(s1,s2) ->
+      let s1s = stmt_to_string ~sspo:ssp s1
+      and s2s = stmt_to_string ~sspo:ssp s2
+      in  to_string ssp.sequence_sp (s1,s2) (s1s ^ "; " ^ s2s)
+  | If(b,s1,s2) -> 
+      let bs  = bexpr_to_string ~aspo:asp ~bspo:bsp b
+      and s1s = stmt_to_string ~sspo:ssp s1
+      and s2s = stmt_to_string ~sspo:ssp s2
+      in  to_string ssp.if_sp (b,s1,s2) ("if "^ bs ^" then "^ s1s ^" else "^ s2s)
+  | While(b,s) ->
+      let bs = bexpr_to_string ~bspo:bsp b
+      and ss = stmt_to_string ~sspo:ssp s
+      in  to_string ssp.while_sp (b,s) ("while " ^ bs ^ " do " ^ ss ^ " od") 
+  | For(i,b,u,s) ->
+      let is = stmt_to_string ~sspo:ssp i
+      and bs = bexpr_to_string ~aspo:asp ~bspo:bsp b
+      and us = stmt_to_string ~sspo:ssp s
+      and ss = stmt_to_string ~sspo:ssp s
+      in  to_string ssp.for_sp (i,b,u,s) 
+          ("for " ^ is ^ "; " ^ bs ^ "; " ^ us ^ " do" ^ ss ^ " od")
+  | Case(a,l,d) -> 
+      let e = aexpr_to_string ~aspo:asp a
+      and ls = cstmts_to_string l
+      and ds = stmt_to_string ~sspo:ssp d
+      in  to_string ssp.case_sp (a,l,d) ("case " ^ e ^ ls ^ " default: " ^ ds)
+  | Repeat(s,b) ->
+      let ss = stmt_to_string ~sspo:ssp s
+      and bs = bexpr_to_string ~aspo:asp ~bspo:bsp b
+      in  to_string ssp.repeat_sp (s,b) ("repeat " ^ ss ^ " until " ^ bs)
+  | Choose(l) ->
+      let ls = wstmts_to_string l
+      in  to_string ssp.choose_sp l ("choose " ^ ls ^ " ro")
+  | Goto(t) ->
+      to_string ssp.goto_sp t ("goto " ^ t)
+and
+cstmt_to_string (i,s) = 
+  let i = string_of_int i 
+  and s = stmt_to_string s
+  in  "of " ^ i ^ ": " ^ s
+and 
+cstmts_to_string csl = 
+  String.concat "\n" (List.map cstmt_to_string csl)
+and 
+wstmt_to_string (w,s) =
+  let w = weight_to_string w "/"
+  and s = stmt_to_string s
+  in  w ^ ": " ^ s
+and
+wstmts_to_string  wsl =
+  String.concat " or " (List.map wstmt_to_string wsl)
+;;
+
+let output_stmt outch s = output_string outch (stmt_to_string s)
+;;
+
+let output_weight outch w sep = output_string outch (weight_to_string w sep)
+;;
 (***********************************************************************)
 (** Text Output                                                         *)
 (***********************************************************************)
 
 let print_stmt s = output_stmt stdout s;;
-
-let print_wstmt ws = output_wstmt stdout ws;;
-
-let print_wstmts wsl = output_wstmts stdout wsl;;
-
-let print_cstmt cs = output_cstmt stdout cs;;
-
-let print_cstmts csl = output_cstmts stdout csl;;
-
-(*
-let rec print_stmt s =
-  match s with 
-    Stop ->         print_string "stop"
-  | Skip ->         print_string "skip"
-  | TaggedStmt(l,s) -> print_string l;
-                    print_string " : ";
-                    print_stmt s
-  | Assign(x,a) ->  Expression.print_aexpr x;
-                    print_string " := ";
-                    Expression.print_aexpr a
-  | Random(x,r) ->  Expression.print_aexpr x;
-                    print_string " ?= { ";
-                    Declaration.output_range stdout  r;
-                    print_string " }"
-  | Sequence(s1,s2) -> print_stmt s1;
-                    print_string "; ";
-                    print_newline ();
-                    print_stmt s2
-  | If(b,s1,s2) ->  print_string "if ";
-                    Expression.print_bexpr b;
-                    print_string " then ";
-                    print_stmt s1;
-                    print_string " else ";
-                    print_stmt s2;
-                    print_string " fi"
-  | While(b,s) ->   print_string "while ";
-                    Expression.print_bexpr b;
-                    print_string " do ";
-                    print_newline ();
-                    print_stmt s;
-                    print_string "od"
-  | For(i,b,u,s) ->   print_string "for ";
-                    print_stmt i;
-                    print_string "; ";
-                    Expression.print_bexpr b;
-                    print_string "; ";
-                    print_stmt u;
-                    print_string " do";
-                    print_newline ();
-                    print_stmt s;
-                    print_string "od"
-  | Case(a,l,d) ->  print_string "case ";
-                    Expression.print_aexpr a;
-                    print_newline ();
-                    print_cstmts l;
-                    print_string "default: ";
-                    print_stmt d;
-                    print_string "esac"
-  | Repeat(s,b) ->  print_string "repeat ";
-                    print_newline ();
-                    print_stmt s;
-                    print_newline ();
-                    print_string "until ";
-                    Expression.print_bexpr b
-  | Choose(l) ->    print_string "choose ";
-                    print_newline ();
-                    print_wstmts l;
-                    print_string "ro";
-                    print_newline ()
-  | Goto(t) ->      print_string "goto ";
-                    print_string t;
-and 
-print_wstmt (p,s) =
-  match p with (***************)
-    CWeight(w) -> print_int w;
-  | PWeight(w) -> print_string w;
-  print_string ":";
-  print_stmt s;
-  print_newline ()
-and 
-print_wstmts wsl =
-  if ((List.length wsl) > 1) then
-    begin
-    print_wstmt (List.hd wsl);
-    print_string "or ";
-    print_newline ();
-    print_wstmts (List.tl wsl)
-    end
-  else if ((List.length wsl) = 1) then
-    begin
-    print_wstmt (List.hd wsl);
-    end
-and 
-print_cstmt (i,s) =
-  print_string "of ";
-  print_int i;
-  print_string ": ";
-  print_stmt s;
-  print_newline ();
-and
-print_cstmts csl =
-  List.iter print_cstmt csl
-;;
-*)
 
 (***********************************************************************)
 (* Julia Output                                                       *)
@@ -243,18 +178,7 @@ let julia_stmt s =
   if !flagJulia then output_stmt !fidJulia s
 ;;
 
-let julia_test b =
-  if !flagJulia then output_bexpr !fidJulia b
+let julia_weight w =
+  if !flagJulia then output_weight !fidJulia w "//"
 ;;
 
-let julia_aexprs s =
-  if !flagJulia then output_aexpr !fidJulia s
-;;
-
-(***********************************************************************)
-(* LateX Output                                                        *)
-(***********************************************************************)
-
-(* latex_ *)
-
-(***********************************************************************)

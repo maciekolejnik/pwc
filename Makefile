@@ -19,7 +19,7 @@ PPOBJECTS = global.cmo \
 SYNTAXFILES = expression.ml declaration.ml statement.ml
 
 pwc: $(PPOBJECTS) pwc.cmo
-	$(OCAMLC) -g -o pwc $(PPOBJECTS) pwc.cmo
+	$(OCAMLC) -g -o pwc str.cma $(PPOBJECTS) pwc.cmo
 
 # Common stuff
 
