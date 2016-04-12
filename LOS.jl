@@ -59,6 +59,19 @@ function U_c(dim,c)
 end
 
 """
+    e_i(dim,i)
+
+Return a vector of dimension `dim` (ie a 1x`dim` matrix) with a one at 
+position `i`, zeros otheriwse
+"""
+function e_i(dim,i)
+  @assert valid_index(dim, i)
+  R = spzeros(1, dim)
+  R[i] = 1
+  return R
+end
+
+"""
     findall(lookedfor, target)
 
 Find all indices of elements from 'lookedfor' in 'target'

@@ -149,13 +149,13 @@ let julia_operator (l,blk) =
   | BTest(b) ->
       julia_assignment (fl ^ "t") (p l true);
       julia_assignment (fl ^ "f") (p l false);
-      julia_assignment (fl) (fl ^ "f")
+      julia_assignment (fl) ("F" ^ l ^ "f")
   | BAsn(x,a) ->
       julia_assignment fl (ue x l) 
   | BRnd(x,r) ->
       julia_assignment fl (ur x r)
   | _ -> 
-      julia_assignment fl "Id(d)" 
+      julia_assignment fl "I(d)" 
 ;;
 
 let julia_operators blocks =

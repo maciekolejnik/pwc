@@ -219,7 +219,7 @@ let rec asp =
     var_sp = (Some var); 
     div_sp = (Some div);
   }
-and var v = "values[id2ord[\"" ^ v ^ "\"]]" 
+and var v = "id2rng[\"" ^ v ^ "\"][" ^ "values[id2ord[\"" ^ v ^ "\"]]]" 
 and div (e1,e2) = 
   let e1 = aexpr_to_string ~aspo:asp e1
   and e2 = aexpr_to_string ~aspo:asp e2 

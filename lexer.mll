@@ -22,7 +22,7 @@ let blank = [' ' '\t']+
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let nonzero = ['1'-'9']['0'-'9']*
 let number = '0' | nonzero  
-let rational = number blank* '/' blank* nonzero
+let rational = number blank* "//" blank* nonzero
 
 (***********************************************************************)
 
