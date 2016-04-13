@@ -6,7 +6,9 @@ keywords = {
     'begin' : 'BEGIN',
     'init'  : 'INIT',
     'end'   : 'END',
-    'block' : 'BLOCK'
+    'block' : 'BLOCK',
+    'or'    : 'OR',
+    'step'  : 'STEP'
 }
 
 tokens = list(keywords.values()) + [
@@ -15,9 +17,13 @@ tokens = list(keywords.values()) + [
     'SEMICOL',
     'ID',
     'EQUALS',
-    'NUMBER'
+    'NUMBER',
+    'DIV',
+    'MINUS'
 ]
 
+t_MINUS   = r'-'
+t_DIV     = r'/'
 t_COLON   = r':'
 t_SEMICOL = r';'
 t_COMMA   = r','

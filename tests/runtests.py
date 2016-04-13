@@ -1,9 +1,7 @@
 #!/usr/bin/python
 
-from __future__ import print_function
-
 import subprocess
-import glob, os
+import glob, os, sys
 
 import lexer 
 import parser
@@ -12,27 +10,40 @@ import parser
 def kron(a, b):
   return "kron(" + a + ",\n\t " + b + ")"
 
-def as_vector(var, value):
+# `values_distribution` is a list of tuples (r,v) where `r` is a rational
+# number (represented as a tuple of integers) representing the probability
+# of variable `var` having value `v`
+def as_vector(var, values_distribution):
   rng = "id2rng[\"" + var + "\"]"
-  return "e_i(length(" + rng + "), findfirst(" + rng + ", " + str(value) + "))"
+  vectors = []
+  for (p, q), value in values_distribution:
+    rational = str(p) + "//" + str(q)
+    findfirst = "findfirst(" + rng + ", " + str(value) + ")"
+    vectors.append(rational + " * e_i(length(" + rng + "), " + findfirst + ")")
+  return " + ".join(vectors) 
 
-def compute_variables_vector(mapping):
+def compute_variables_vector(variables_mapping):
   result = "eye(1)"
-  for var_name, value in mapping:
-    result = kron(result, as_vector(var_name, value))   
+  for var_name, values_distribution in variables_mapping:
+    result = kron(result, as_vector(var_name, values_distribution))   
   return result
 
-def compute_state_vector(variables_vector, block):
-  return kron(variables_vector, "e_i(b," + str(block) + ")")
+def compute_state_vector(variables_vector, blocks):
+  vectors = []
+  multiplier = "1//" + str(len(blocks))
+  for block in blocks:
+    vectors.append("e_i(b," + str(block) + ")")
+  block_vector = multiplier + " * (" + " + ".join(vectors) + ")"
+  return kron(variables_vector, block_vector)
 
 def generate_test_for_init(variables_mapping):
   result = kron(compute_variables_vector(variables_mapping), "e_i(b,1)")
   return "init = " + result + "\n\n"
 
-def generate_test_for_assert(steps, variables_mapping, block):
+def generate_test_for_assert(steps, variables_mapping, blocks):
   result = "@test init * T^" + str(steps) + " == "
   variables_vector = compute_variables_vector(variables_mapping)
-  result += compute_state_vector(variables_vector, block)
+  result += compute_state_vector(variables_vector, blocks)
   result += "\n"
   return result
 
@@ -50,30 +61,33 @@ def generate_test_for_case(case):
 
 def generate(prog, basename):
   result = "using Base.Test\n\n"
-  result += "include(\"../../examples/correct/" + basename + ".jl\")\n\n"
+  result += "include(\"../../examples/" + basename + ".jl\")\n\n"
   for case in prog:
     result += generate_test_for_case(case)
-  result += "println(\"Tests in test" + basename + ".jl: SUCCESS\")\n"
+  result += "println(\"SUCCESS\")\n"
   return result
 
-os.chdir("./t_files")
-for file in glob.glob("*.t"):
+def test_file(file):
   contents = open(file).read()
+  sys.stdout.write("Parsing " + file + "...")
+  sys.stdout.flush()
   prog = parser.parse(contents)
+  print("SUCCESS")
   basename = os.path.splitext(file)[0]
   julia_string = generate(prog, basename)
   test_filename = "../generated/test" + basename + ".jl" 
   with open(test_filename, "w") as julia_file:
     julia_file.write(julia_string)
-  #p = subprocess.Popen(["../
+  sys.stdout.write("Testing " + basename + ".jl...")
+  sys.stdout.flush()
   p = subprocess.Popen(["julia", test_filename], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   out, err = p.communicate()
   print(out.strip())
   if err.strip() != "":
     print(err)
 
-
-
-
-
+os.chdir("./t_files")
+files = sys.argv[1:] if len(sys.argv) > 1 else glob.glob("*.t")
+for file in files: 
+  test_file(file)
 

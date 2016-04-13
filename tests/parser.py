@@ -31,8 +31,21 @@ def p_asserts(p):
     p[0].update(p[2])
 
 def p_assert(p):
-  'assert : NUMBER COLON values SEMICOL BLOCK EQUALS NUMBER'
-  p[0] = { p[1] : (p[3], p[7]) }
+  'assert : STEP NUMBER COLON values SEMICOL block'
+  p[0] = { p[2] : (p[4], list(set(p[6]))) }
+
+def p_block(p):
+  'block : BLOCK EQUALS range'
+  p[0]  = p[3]
+
+def p_range(p):
+  '''range : range COMMA NUMBER
+           | NUMBER'''
+  if len(p) == 4:
+    p[0] = p[1]
+    p[0].append(p[3])
+  else:
+    p[0] = [p[1]]
 
 def p_values(p):
   '''values : values COMMA value
@@ -44,9 +57,37 @@ def p_values(p):
     p[0] = [p[1]]
 
 def p_value(p):
-  'value : ID EQUALS NUMBER'
-  #p[0] = { p[1] : p[3] }
+  'value : ID EQUALS rhs'
   p[0] = (p[1], p[3])
+
+def p_rhs_num(p):
+  'rhs : integer' 
+  p[0] = [((1,1), p[1])]
+
+def p_rhs_alts(p):
+  'rhs : alts'
+  p[0] = p[1]
+
+def p_alts(p):
+  '''alts : alts OR alt
+          | alt '''
+  if len(p) == 4:
+    p[0] = p[1]
+    p[0].append(p[3])
+  else:
+    p[0] = [p[1]]
+
+def p_alt(p):
+  'alt : NUMBER DIV NUMBER COLON integer'
+  p[0] = ((p[1], p[3]),  p[5])
+
+def p_integer(p):
+  '''integer : NUMBER
+             | MINUS NUMBER'''
+  if len(p) == 2:
+    p[0] = p[1]
+  else:
+    p[0] = -p[2]
 
 def p_error(p):
   print("Syntax error at token", p.type, p.value)
@@ -59,4 +100,3 @@ def parse(data,debug=0):
   if parser.error:
     return None
   return p
-
