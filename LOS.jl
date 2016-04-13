@@ -207,7 +207,7 @@ function Ue(dims::Array{Int,1}, ordinal::Int, update::Function)
   R = spzeros(d,d)
   for i = 1:d
     values = unindex(dims, i)
-    values[ordinal] = update(values) # might be that the value computes here
+    values[ordinal] = update(values) # might be that the value computed here
                                      # falls out of range (so is 0)
     if values[ordinal] > 0
       R[i,index(dims, values)] = 1

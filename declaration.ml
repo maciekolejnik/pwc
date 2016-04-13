@@ -152,7 +152,7 @@ let julia_ords2rng decls =
 let julia_decls decls = 
   if !flagJulia then 
     begin
-      julia_string "include(\"../../LOS.jl\") # Linear operator semantics";
+      julia_string "include(\"../LOS.jl\") # Linear operator semantics";
 
       julia_separator ();
 
@@ -178,8 +178,8 @@ let julia_decls decls =
       julia_int (List.length decls);
       julia_string " # number of variables\n\n";
 
-      julia_string "const dims = ";
-      julia_string "convert(Array{Int,1}, map(length, values(id2rng)))\n\n";
+      julia_string "dims = Array{Int}(v)\n";
+      julia_string "for i=1:v dims[i] = length(ord2rng[i]) end\n\n";
       
       julia_string "const d = prod(dims)\n\n";
       

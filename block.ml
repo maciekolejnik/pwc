@@ -124,7 +124,7 @@ let fraction r = "1//" ^ string_of_int (List.length r)
 
 let p l b   = "P(dims, test" ^ l ^ ", " ^ string_of_bool b ^ ")"
 and ue id l = "Ue(dims, " ^ id2ord id ^ ", " ^ "assign" ^ l ^")"
-and uc id i = "Uc(dims, " ^ id2ord id ^ ", " ^ i ^ ")"
+and uc id i = "U_xk_c(dims, " ^ id2ord id ^ ", " ^ i ^ ")"
 and ff id i = "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
 ;;
 

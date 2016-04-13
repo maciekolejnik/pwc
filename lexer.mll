@@ -10,7 +10,7 @@
       lexbuf.lex_curr_p with pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 
   let rational_of_string s =
-    let r = (Str.split (Str.regexp "/") s) in
+    let r = (Str.split (Str.regexp "//") s) in
     let p = int_of_string (String.trim (List.nth r 0))
     and q = int_of_string (String.trim (List.nth r 1))
     in  (p,q)
