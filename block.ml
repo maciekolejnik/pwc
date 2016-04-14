@@ -23,8 +23,6 @@ type block =
   | BTest  of bexpr
   | BAsn  of varref * aexpr
   | BRnd  of varref * range
-  (*| BAsn  of aexpr * aexpr
-  | BRnd  of aexpr * range*)
 ;;
 
 type lblock =
@@ -151,15 +149,12 @@ let julia_operator (l,blk) =
       julia_assignment (fl ^ "f") (p l false);
       julia_assignment (fl) ("F" ^ l ^ "f")
   | BAsn(x,a) ->
-      begin
-      match x with
+      begin match x with
       | Var(v) -> julia_assignment fl (ue (id2ord v) l)
       | ArrElem(v,i) -> 
           let ord = id2ord v ^ "+" ^ string_of_int i 
           in julia_assignment fl (ue ord l)
       end
-      (** TODO change it here *)
-      (*julia_assignment fl (ue x l) *)
   | BRnd(x,r) ->
       begin match x with
       | Var(v) -> julia_assignment fl (ur v (id2ord v) r)
@@ -167,8 +162,6 @@ let julia_operator (l,blk) =
           let ord = id2ord v ^ "+" ^ string_of_int i 
           in julia_assignment fl (ur v ord r)
       end
-      (** TODO change it here *)
-      (*julia_assignment fl (ur x l) *)
   | _ -> 
       julia_assignment fl "I(d)" 
 ;;
@@ -179,8 +172,8 @@ let julia_operators blocks =
 
 (***********************************************************************)
 
-let id aexpr = 
-  match aexpr with
+let id vr = 
+  match vr with
   | Var(v) -> v
   | ArrElem(a,i) -> a
 

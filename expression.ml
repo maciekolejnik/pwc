@@ -14,8 +14,6 @@ type varref =
 type aexpr =
    | Const of int
    | Varref of varref
-   (*| Var of id
-   | ArrElem of id * index*)
    | Minus of aexpr
    | Sum  of aexpr * aexpr
    | Diff of aexpr * aexpr
@@ -70,8 +68,6 @@ let varref_to_string ?vrspo vr =
  *)
 type asp =
   {  const_sp : (int -> string) option;
-     (*var_sp   : (id -> string) option;
-     arr_sp   : (id * index -> string) option;*)
      vr_sp    : vrsp option;
      minus_sp : (aexpr -> string) option;
      sum_sp   : (aexpr * aexpr -> string) option;
@@ -88,8 +84,6 @@ type asp =
 let default_asp =
   {  const_sp = None;  
      vr_sp    = None;
-     (*var_sp   = None;  
-     arr_sp   = None;  *)
      minus_sp = None;  
      sum_sp   = None;  
      diff_sp  = None; 
@@ -118,10 +112,6 @@ let rec aexpr_to_string ?aspo aexpr =
   match aexpr with 
   | Const(c) -> 
       to_string asp.const_sp c (string_of_int c)
-  (*| Var(v) ->  
-      to_string asp.var_sp v v
-  | ArrElem(a,i) ->
-      to_string asp.arr_sp (a,i) (a ^ "[" ^ (string_of_int i) ^ "]")*)
   | Varref(v) -> 
       varref_to_string ~vrspo:vrsp v
   | Minus(e) ->   
@@ -238,6 +228,8 @@ let output_bexpr outch e = output_string outch (bexpr_to_string e)
 (***********************************************************************)
 (** Text Output                                                        *)
 (***********************************************************************)
+let print_varref vr = output_varref stdout vr
+;;
 
 let print_aexpr e = output_aexpr stdout e 
 ;;
@@ -249,9 +241,8 @@ let print_bexpr e = output_bexpr stdout e
 (** Julia Output                                                       *)
 (***********************************************************************)
 
-
 (**
- *     asp (aexpr special printer)
+ *     julia_asp (aexpr special printer)
  *
  * Overwrites the default printing with julia specific ways of printing
  * variables and division
@@ -263,15 +254,13 @@ let rec julia_asp =
     }
   in
   { default_asp with 
-    (*var_sp = (Some var); 
-    arr_sp = (Some arr);*)
-    vr_sp = (Some varref); 
-    div_sp    = (Some div);
+    vr_sp  = (Some varref); 
+    div_sp = (Some div);
   }
-and var v = id2rng v ^ "[values[" ^ id2ord v ^ "]]" 
+and var v = id2rng v ^ in_sq_brackets (values v) 
 and arr (a,i) = 
   let ordinal = id2ord a ^ " + " ^ (string_of_int i)
-  in id2rng a ^ "[values[" ^ ordinal ^ "]]" 
+  in id2rng a ^ in_sq_brackets (values ordinal) 
 and div (e1,e2) = 
   let e1 = aexpr_to_string ~aspo:julia_asp e1
   and e2 = aexpr_to_string ~aspo:julia_asp e2 

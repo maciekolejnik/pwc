@@ -9,10 +9,9 @@ type id =
     string
 ;;
 
-type meta =
+type meta = (** metadata of a variable *)
   | Primitive of range
   | Array of int * range
-    (* add constants later? *)
 ;;
 
 type decl =
@@ -34,34 +33,16 @@ and maxInt =  4 (* truncates integers *)
 (** Auxiliary                                                          *)
 (***********************************************************************)
 
-let range_of_variable meta =
-  match meta with 
+let range (_,m) =
+  match m with 
   | Primitive(r) -> r
   | Array(l,r) -> r
 ;;
 
-(**
- *     size meta
- *
- * Return size of variable with metadata `meta`
- *)
-let size meta =
-  match meta with
+let size (_,m) =
+  match m with
   | Primitive(_) -> 1
   | Array(l,_)  -> l
-;;
-
-(**
- *     ordinals decls
- *
- * Return the list of ordinals corresponding to declarations `decls`
- *)
-let ordinals decls =
-  let rec ordinals_aux decls cur =
-    match decls with
-    | [] -> []
-    | hd::tl -> cur :: ordinals_aux tl (cur + size(snd(hd)))
-  in ordinals_aux decls 1
 ;;
 
 (***********************************************************************)
@@ -73,11 +54,11 @@ let range_to_string rng =
 ;;
 
 let range_in_square_brackets rng =
-  "[" ^ range_to_string rng ^ "]"
+  in_sq_brackets (range_to_string rng)
 ;;
 
 let range_in_braces rng =
-  "{" ^ range_to_string rng ^ "}"
+  in_braces (range_to_string rng)
 ;;
 
 let meta_to_string meta =
@@ -127,7 +108,7 @@ let print_decls ds = output_decls stdout ds
  *     julia_dict name entries 
  *
  * @param `name` name of the dictionary
- * @param `entries` list of (key,value) pairs 
+ * @param `entries` list of (key,value) pairs (both are strings) 
  *
  * Declare a dictionary `name` in a julia file with 
  * entries `entries`
@@ -142,6 +123,14 @@ let julia_dict name entries =
 
 (***********************************************************************)
 
+let ordinals decls =
+  let rec ordinals_aux decls cur =
+    match decls with
+    | [] -> []
+    | hd::tl -> cur :: ordinals_aux tl (cur + size hd)
+  in ordinals_aux decls 1
+;;
+
 let id2ord_entry (id,m) i =
   (in_quotes id, string_of_int i)
 ;;
@@ -153,7 +142,7 @@ let julia_ids2ord decls =
 (***********************************************************************)
 
 let id2rng_entry (id,m) =
-  (in_quotes id, range_in_square_brackets (range_of_variable m))
+  (in_quotes id, range_in_square_brackets (range (id,m)))
 ;;
 
 let julia_ids2rng decls =
@@ -163,27 +152,27 @@ let julia_ids2rng decls =
 (***********************************************************************)
 let ord2rng_entries decls =
   let rec ord2rng_entries_aux decls i m =
+    let is = string_of_int i in
     match decls with
     | [] -> []
     | hd::tl -> 
+        let r = range_in_square_brackets (range hd) in
         begin match (snd hd) with
-        | Primitive(r) -> 
-            (string_of_int i, range_in_square_brackets r) 
-            :: ord2rng_entries_aux tl (i+1) m
-        | Array(l,r) -> 
-            if m == l then ord2rng_entries_aux tl i 0
-            else (string_of_int i, range_in_square_brackets r)
-            :: ord2rng_entries_aux decls (i+1) (m+1)
+        | Primitive(_) -> 
+            (is,r) :: ord2rng_entries_aux tl (i+1) m
+        | Array(l,_) -> 
+            if m == l 
+            then ord2rng_entries_aux tl i 0
+            else (is,r) :: ord2rng_entries_aux decls (i+1) (m+1)
         end
   in ord2rng_entries_aux decls 1 0
 ;;
 
 let ord2rng_entry i (id,m) =
-  (string_of_int i, range_in_square_brackets (range_of_variable m))
+  (string_of_int i, range_in_square_brackets (range (id,m)))
 ;;
 
 let julia_ords2rng decls =
-  (*julia_dict "ord2rng" (List.map2 ord2rng_entry (ordinals decls) decls);*)
   julia_dict "ord2rng" (ord2rng_entries decls)
 ;;
 

@@ -98,12 +98,28 @@ let in_quotes id =
   "\"" ^ id ^ "\""
 ;;
 
+let in_sq_brackets l =
+  "[" ^ l ^ "]"
+;;
+
+let in_braces l =
+  "{" ^ l ^ "}"
+;;
+
 let dict_entry (k,v) =
   k ^ " => " ^ v
 ;;
 
-let id2ord id = "id2ord[" ^ in_quotes id ^ "]"
-and id2rng id = "id2rng[" ^ in_quotes id ^ "]"
+let id2ord id = 
+  "id2ord" ^ in_sq_brackets (in_quotes id)
+;;
+
+let id2rng id = 
+  "id2rng" ^ in_sq_brackets (in_quotes id)
+;;
+
+let values ord = 
+  "values" ^ in_sq_brackets ord
 ;; 
 (***********************************************************************)
 
@@ -111,10 +127,10 @@ and id2rng id = "id2rng[" ^ in_quotes id ^ "]"
 let paraList = ref ( []: string list )
 ;;
 
-let rec is_in id list = 
+let rec is_in elem list = 
   match list with
-  [] -> false
-  | hd :: tail -> (id = hd) || is_in id tail
+  | [] -> false
+  | hd::tl -> (elem = hd) || is_in elem tl
 ;;
 
 let is_para id =
