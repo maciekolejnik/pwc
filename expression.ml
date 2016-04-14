@@ -6,18 +6,16 @@ type id = string
 type index = int
 ;;
 
-(*
 type varref = 
    | Var of id
    | ArrElem of id * index  
 ;;
-*)
 
 type aexpr =
    | Const of int
-   (*| Varref of varref*)
-   | Var of id
-   | ArrElem of id * index
+   | Varref of varref
+   (*| Var of id
+   | ArrElem of id * index*)
    | Minus of aexpr
    | Sum  of aexpr * aexpr
    | Diff of aexpr * aexpr
@@ -48,6 +46,23 @@ type bexpr =
 (** Generic Output                                                     *)
 (***********************************************************************)
 
+type vrsp =
+  {  var_sp : (id -> string) option;
+     arr_sp : (id * index -> string) option;
+  }
+
+let default_vrsp =
+  {  var_sp = None;
+     arr_sp = None;
+  }
+
+let varref_to_string ?vrspo vr =
+  let vrsp = some_or_default vrspo default_vrsp in
+  match vr with
+  | Var(v) -> to_string vrsp.var_sp v v
+  | ArrElem(a,i) -> to_string vrsp.arr_sp (a,i) (a ^ "[" ^ string_of_int i ^ "]")
+;;
+
 (**
  *     asp
  *
@@ -55,8 +70,9 @@ type bexpr =
  *)
 type asp =
   {  const_sp : (int -> string) option;
-     var_sp   : (id -> string) option;
-     arr_sp   : (id * index -> string) option;
+     (*var_sp   : (id -> string) option;
+     arr_sp   : (id * index -> string) option;*)
+     vr_sp    : vrsp option;
      minus_sp : (aexpr -> string) option;
      sum_sp   : (aexpr * aexpr -> string) option;
      diff_sp  : (aexpr * aexpr -> string) option;
@@ -71,8 +87,9 @@ type asp =
 
 let default_asp =
   {  const_sp = None;  
-     var_sp   = None;  
-     arr_sp   = None;  
+     vr_sp    = None;
+     (*var_sp   = None;  
+     arr_sp   = None;  *)
      minus_sp = None;  
      sum_sp   = None;  
      diff_sp  = None; 
@@ -92,7 +109,8 @@ let default_asp =
  * the aexpr special printer `aspo` if present
  *)
 let rec aexpr_to_string ?aspo aexpr = 
-  let asp = some_or_default aspo default_asp in
+  let asp = some_or_default aspo default_asp in 
+  let vrsp = some_or_default asp.vr_sp default_vrsp in
   let infix_operator sp op e1 e2 = 
     let e1s = aexpr_to_string ~aspo:asp e1 
     and e2s = aexpr_to_string ~aspo:asp e2
@@ -100,10 +118,12 @@ let rec aexpr_to_string ?aspo aexpr =
   match aexpr with 
   | Const(c) -> 
       to_string asp.const_sp c (string_of_int c)
-  | Var(v) ->  
+  (*| Var(v) ->  
       to_string asp.var_sp v v
   | ArrElem(a,i) ->
-      to_string asp.arr_sp (a,i) (a ^ "[" ^ (string_of_int i) ^ "]")
+      to_string asp.arr_sp (a,i) (a ^ "[" ^ (string_of_int i) ^ "]")*)
+  | Varref(v) -> 
+      varref_to_string ~vrspo:vrsp v
   | Minus(e) ->   
       let es = aexpr_to_string ~aspo:asp e
       in  to_string asp.minus_sp e ("(- " ^ es ^ ")")
@@ -205,6 +225,9 @@ let rec bexpr_to_string ?aspo ?bspo bexpr =
 (***********************************************************************)
 
 (** Default output *)
+let output_varref outch vr = output_string outch (varref_to_string vr)
+;;
+
 let output_aexpr outch e = output_string outch (aexpr_to_string e)
 ;;
 
@@ -233,28 +256,34 @@ let print_bexpr e = output_bexpr stdout e
  * Overwrites the default printing with julia specific ways of printing
  * variables and division
  *)
-let rec asp = 
+let rec julia_asp = 
+  let varref = 
+    {  var_sp = (Some var);
+       arr_sp = (Some arr);
+    }
+  in
   { default_asp with 
-    var_sp = (Some var); 
-    div_sp = (Some div);
-    arr_sp = (Some arr);
+    (*var_sp = (Some var); 
+    arr_sp = (Some arr);*)
+    vr_sp = (Some varref); 
+    div_sp    = (Some div);
   }
 and var v = id2rng v ^ "[values[" ^ id2ord v ^ "]]" 
 and arr (a,i) = 
   let ordinal = id2ord a ^ " + " ^ (string_of_int i)
   in id2rng a ^ "[values[" ^ ordinal ^ "]]" 
 and div (e1,e2) = 
-  let e1 = aexpr_to_string ~aspo:asp e1
-  and e2 = aexpr_to_string ~aspo:asp e2 
+  let e1 = aexpr_to_string ~aspo:julia_asp e1
+  and e2 = aexpr_to_string ~aspo:julia_asp e2 
   in "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
 ;;
 
 let aexpr_to_julia_string e =
-  aexpr_to_string ~aspo:asp e
+  aexpr_to_string ~aspo:julia_asp e
 ;;
 
 let bexpr_to_julia_string e =
-  bexpr_to_string ~aspo:asp e
+  bexpr_to_string ~aspo:julia_asp e
 ;;
 
 (** 
@@ -267,7 +296,7 @@ let bexpr_to_julia_string e =
  *  division operation
  *)
 let julia_aexpr e = 
-  julia_string (aexpr_to_string ~aspo:asp e)
+  julia_string (aexpr_to_string ~aspo:julia_asp e)
 ;;
 
 (** 
@@ -280,6 +309,6 @@ let julia_aexpr e =
  *  division operation
  *)
 let julia_bexpr e =
-  julia_string (bexpr_to_string ~aspo:asp e)
+  julia_string (bexpr_to_string ~aspo:julia_asp e)
 ;;
 

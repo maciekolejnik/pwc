@@ -8,10 +8,10 @@ type lstmt =
    | LStop of label
    | LSkip of label
    | LTagged of tag * lstmt
-   (*| LAssign of label * varref * aexpr
-   | LRandom of label * varref * range*)
-   | LAssign of label * aexpr * aexpr
-   | LRandom of label * aexpr * range
+   | LAssign of label * varref * aexpr
+   | LRandom of label * varref * range
+   (*| LAssign of label * aexpr * aexpr
+   | LRandom of label * aexpr * range*)
    | LSequence of lstmt * lstmt
    | LIf of label * bexpr * lstmt * lstmt
    | LWhile of label * bexpr * lstmt 
@@ -122,8 +122,8 @@ let rec output_lstmt outch s =
       output_lstmt outch s
   | LAssign(l,x,a) ->  
       output_string outch "[";
-      (*Expression.output_varref outch x;*)
-      Expression.output_aexpr outch x;
+      Expression.output_varref outch x;
+      (*Expression.output_aexpr outch x;*)
       output_string outch " := ";
       Expression.output_aexpr outch a;
       output_string outch "]^";
@@ -131,8 +131,8 @@ let rec output_lstmt outch s =
       output_string outch " "
   | LRandom(l,x,r) ->  
       output_string outch "[";
-      (*Expression.output_varref outch x;*)
-      Expression.output_aexpr outch x;
+      Expression.output_varref outch x;
+      (*Expression.output_aexpr outch x;*)
       output_string outch " ?= ";
       Declaration.output_range stdout  r;
       output_string outch "]^";

@@ -7,10 +7,10 @@ type stmt =
    | Stop
    | Skip
    | Tagged of tag * stmt
-   (*| Assign of varref * aexpr
-   | Random of varref * range*)
-   | Assign of aexpr * aexpr
-   | Random of aexpr * range
+   | Assign of varref * aexpr
+   | Random of varref * range
+   (*| Assign of aexpr * aexpr
+   | Random of aexpr * range*)
    | Sequence of stmt * stmt
    | If of bexpr * stmt * stmt
    | While of bexpr * stmt 
@@ -60,10 +60,10 @@ type ssp =
   {  stop_sp     : (unit -> string) option;
      skip_sp     : (unit -> string) option;
      tagged_sp   : (tag * stmt -> string) option;
-     (*assign_sp   : (varref * aexpr -> string) option;
-     random_sp   : (varref * range -> string) option;*)
-     assign_sp   : (aexpr * aexpr -> string) option;
-     random_sp   : (aexpr * range -> string) option;
+     assign_sp   : (varref * aexpr -> string) option;
+     random_sp   : (varref * range -> string) option;
+     (*assign_sp   : (aexpr * aexpr -> string) option;
+     random_sp   : (aexpr * range -> string) option;*)
      sequence_sp : (stmt * stmt -> string) option;
      if_sp       : (bexpr * stmt * stmt -> string) option;
      while_sp    : (bexpr * stmt -> string) option;
@@ -95,7 +95,8 @@ let default_ssp =
 let rec stmt_to_string ?sspo ?aspo ?bspo stmt =
   let ssp = some_or_default sspo default_ssp 
   and asp = some_or_default aspo default_asp 
-  and bsp = some_or_default bspo default_bsp 
+  and bsp = some_or_default bspo default_bsp in 
+  let vrsp = some_or_default asp.vr_sp default_vrsp
   in
   match stmt with 
   | Stop -> 
@@ -106,13 +107,13 @@ let rec stmt_to_string ?sspo ?aspo ?bspo stmt =
       let ss = stmt_to_string ~sspo:ssp s 
       in  to_string ssp.tagged_sp (t,s) (t ^ ": " ^ ss)
   | Assign(x,a) -> 
-      let xs = aexpr_to_string ~aspo:asp x
-      (*let xs = varref_to_string x*)
+      (*let xs = aexpr_to_string ~aspo:asp x*)
+      let xs = varref_to_string ~vrspo:vrsp x
       and e = aexpr_to_string ~aspo:asp a
       in  to_string ssp.assign_sp (x,a) (xs ^ " := " ^ e)
   | Random(x,r) -> 
-      let xs = aexpr_to_string ~aspo:asp x
-      (*let xs = varref_to_string x*)
+      (*let xs = aexpr_to_string ~aspo:asp x*)
+      let xs = varref_to_string ~vrspo:vrsp x
       and rs = range_to_string r
       in  to_string ssp.random_sp (x,r) (xs ^ " ?= {" ^ rs ^ "}")
   | Sequence(s1,s2) ->

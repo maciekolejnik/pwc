@@ -162,18 +162,18 @@ let julia_ids2rng decls =
 
 (***********************************************************************)
 let ord2rng_entries decls =
-  let rec ord2rng_entries_aux decls i ai =
+  let rec ord2rng_entries_aux decls i m =
     match decls with
     | [] -> []
     | hd::tl -> 
         begin match (snd hd) with
         | Primitive(r) -> 
             (string_of_int i, range_in_square_brackets r) 
-            :: ord2rng_entries_aux tl (i+1) ai
+            :: ord2rng_entries_aux tl (i+1) m
         | Array(l,r) -> 
-            if ai == l then ord2rng_entries_aux tl i 0
+            if m == l then ord2rng_entries_aux tl i 0
             else (string_of_int i, range_in_square_brackets r)
-            :: ord2rng_entries_aux decls (i+1) (ai+1)
+            :: ord2rng_entries_aux decls (i+1) (m+1)
         end
   in ord2rng_entries_aux decls 1 0
 ;;

@@ -21,8 +21,10 @@ type block =
   | BChoose
   | BGoto of tag
   | BTest  of bexpr
-  | BAsn  of aexpr * aexpr
-  | BRnd  of aexpr * range
+  | BAsn  of varref * aexpr
+  | BRnd  of varref * range
+  (*| BAsn  of aexpr * aexpr
+  | BRnd  of aexpr * range*)
 ;;
 
 type lblock =
@@ -155,7 +157,6 @@ let julia_operator (l,blk) =
       | ArrElem(v,i) -> 
           let ord = id2ord v ^ "+" ^ string_of_int i 
           in julia_assignment fl (ue ord l)
-      | _ -> failwith "dupa"
       end
       (** TODO change it here *)
       (*julia_assignment fl (ue x l) *)
@@ -165,7 +166,6 @@ let julia_operator (l,blk) =
       | ArrElem(v,i) -> 
           let ord = id2ord v ^ "+" ^ string_of_int i 
           in julia_assignment fl (ur v ord r)
-      | _ -> failwith "dupa"
       end
       (** TODO change it here *)
       (*julia_assignment fl (ur x l) *)
@@ -183,7 +183,6 @@ let id aexpr =
   match aexpr with
   | Var(v) -> v
   | ArrElem(a,i) -> a
-  | _ -> failwith("dupa")
 
 (**
  *     julia_helper (l,b)
