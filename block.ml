@@ -21,8 +21,8 @@ type block =
   | BChoose
   | BGoto of tag
   | BTest  of bexpr
-  | BAsn  of id * aexpr
-  | BRnd  of id * range
+  | BAsn  of aexpr * aexpr
+  | BRnd  of aexpr * range
 ;;
 
 type lblock =
@@ -115,23 +115,21 @@ let print_blocks bs = output_blocks stdout bs
    * b = boolean
    * id = identifier [ie variable name]
  *)
-let id2ord id = "id2ord[" ^ in_quotes id ^ "]"
-and id2rng id = "id2rng[" ^ in_quotes id ^ "]"
-;; 
 
 let fraction r = "1//" ^ string_of_int (List.length r)
 ;;
 
 let p l b   = "P(dims, test" ^ l ^ ", " ^ string_of_bool b ^ ")"
-and ue id l = "Ue(dims, " ^ id2ord id ^ ", " ^ "assign" ^ l ^")"
-and uc id i = "U_xk_c(dims, " ^ id2ord id ^ ", " ^ i ^ ")"
+and ue ord l = "Ue(dims, " ^ ord ^ ", assign" ^ l ^")"
+and uc ord i = "U_xk_c(dims, " ^ ord ^ ", " ^ i ^ ")"
 and ff id i = "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
 ;;
 
-let ucs id r = List.map (fun i -> uc id (ff id (string_of_int i))) r 
+let ucs id ord r = List.map (fun i -> uc ord (ff id (string_of_int i))) r 
 ;; 
 
-let ur id r = fraction r ^ " * (" ^ (String.concat " +\n\t" (ucs id r))  ^ ")" 
+let ur id ord r = 
+  fraction r ^ "*(" ^ (String.concat " +\n\t" (ucs id ord r)) ^ ")" 
 ;;
 
 (***********************************************************************)
@@ -151,9 +149,26 @@ let julia_operator (l,blk) =
       julia_assignment (fl ^ "f") (p l false);
       julia_assignment (fl) ("F" ^ l ^ "f")
   | BAsn(x,a) ->
-      julia_assignment fl (ue x l) 
+      begin
+      match x with
+      | Var(v) -> julia_assignment fl (ue (id2ord v) l)
+      | ArrElem(v,i) -> 
+          let ord = id2ord v ^ "+" ^ string_of_int i 
+          in julia_assignment fl (ue ord l)
+      | _ -> failwith "dupa"
+      end
+      (** TODO change it here *)
+      (*julia_assignment fl (ue x l) *)
   | BRnd(x,r) ->
-      julia_assignment fl (ur x r)
+      begin match x with
+      | Var(v) -> julia_assignment fl (ur v (id2ord v) r)
+      | ArrElem(v,i) -> 
+          let ord = id2ord v ^ "+" ^ string_of_int i 
+          in julia_assignment fl (ur v ord r)
+      | _ -> failwith "dupa"
+      end
+      (** TODO change it here *)
+      (*julia_assignment fl (ur x l) *)
   | _ -> 
       julia_assignment fl "I(d)" 
 ;;
@@ -164,6 +179,11 @@ let julia_operators blocks =
 
 (***********************************************************************)
 
+let id aexpr = 
+  match aexpr with
+  | Var(v) -> v
+  | ArrElem(a,i) -> a
+  | _ -> failwith("dupa")
 
 (**
  *     julia_helper (l,b)
@@ -179,7 +199,7 @@ let julia_helper (l,blk) =
       in  julia_function name ["values"] [b]
   | BAsn(x,a) -> 
       let name = "assign" ^ string_of_int l
-      and ret = "return " ^ ff x (aexpr_to_julia_string a) 
+      and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) 
       in  julia_function name ["values"] [ret]
   | _ -> ()
 ;;

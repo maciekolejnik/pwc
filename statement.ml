@@ -7,8 +7,10 @@ type stmt =
    | Stop
    | Skip
    | Tagged of tag * stmt
-   | Assign of id * aexpr
-   | Random of id * range
+   (*| Assign of varref * aexpr
+   | Random of varref * range*)
+   | Assign of aexpr * aexpr
+   | Random of aexpr * range
    | Sequence of stmt * stmt
    | If of bexpr * stmt * stmt
    | While of bexpr * stmt 
@@ -58,8 +60,10 @@ type ssp =
   {  stop_sp     : (unit -> string) option;
      skip_sp     : (unit -> string) option;
      tagged_sp   : (tag * stmt -> string) option;
-     assign_sp   : (id * aexpr -> string) option;
-     random_sp   : (id * range -> string) option;
+     (*assign_sp   : (varref * aexpr -> string) option;
+     random_sp   : (varref * range -> string) option;*)
+     assign_sp   : (aexpr * aexpr -> string) option;
+     random_sp   : (aexpr * range -> string) option;
      sequence_sp : (stmt * stmt -> string) option;
      if_sp       : (bexpr * stmt * stmt -> string) option;
      while_sp    : (bexpr * stmt -> string) option;
@@ -102,11 +106,15 @@ let rec stmt_to_string ?sspo ?aspo ?bspo stmt =
       let ss = stmt_to_string ~sspo:ssp s 
       in  to_string ssp.tagged_sp (t,s) (t ^ ": " ^ ss)
   | Assign(x,a) -> 
-      let e = aexpr_to_string ~aspo:asp a
-      in  to_string ssp.assign_sp (x,a) (x ^ " := " ^ e)
+      let xs = aexpr_to_string ~aspo:asp x
+      (*let xs = varref_to_string x*)
+      and e = aexpr_to_string ~aspo:asp a
+      in  to_string ssp.assign_sp (x,a) (xs ^ " := " ^ e)
   | Random(x,r) -> 
-      let rs = range_to_string r
-      in  to_string ssp.random_sp (x,r) (x ^ " ?= {" ^ rs ^ "}")
+      let xs = aexpr_to_string ~aspo:asp x
+      (*let xs = varref_to_string x*)
+      and rs = range_to_string r
+      in  to_string ssp.random_sp (x,r) (xs ^ " ?= {" ^ rs ^ "}")
   | Sequence(s1,s2) ->
       let s1s = stmt_to_string ~sspo:ssp s1
       and s2s = stmt_to_string ~sspo:ssp s2

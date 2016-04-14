@@ -102,6 +102,9 @@ let dict_entry (k,v) =
   k ^ " => " ^ v
 ;;
 
+let id2ord id = "id2ord[" ^ in_quotes id ^ "]"
+and id2rng id = "id2rng[" ^ in_quotes id ^ "]"
+;; 
 (***********************************************************************)
 
 (* Global List of Parameters *)

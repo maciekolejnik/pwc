@@ -73,12 +73,13 @@ prog:
 /***********************************************************************/
 
 decls:
-  decl SEMICOL			{ $1 }
-| decl SEMICOL decls           	{ List.append $1 $3 }
+  decl SEMICOL			{ [$1] }
+| decl SEMICOL decls           	{ $1::$3 }
 ;
 
 decl:
-  ID COLON range		{ [($1, Declaration.Primitive($3))] }
+  ID COLON range		{ ($1, Declaration.Primitive($3)) }
+| ID LSQ NUM RSQ COLON range    { ($1, Declaration.Array($3,$6)) } 
 ;
 
 /***********************************************************************/
@@ -114,7 +115,7 @@ block:
 aexpr:
   LPAR aexpr RPAR		{ $2 }
 | NUM			        { Expression.Const($1) }
-| ID                            { Expression.Var($1) }
+| varref                        { $1 }
 | MINUS aexpr %prec UMINUS      { Expression.Minus($2) }
 | aexpr PLUS aexpr	        { Expression.Sum($1,$3) }
 | aexpr MINUS aexpr	        { Expression.Diff($1,$3) }
@@ -142,6 +143,10 @@ bexpr:
 
 cond:
   bexpr                         { Expression.Not($1) }
+
+varref:
+  ID                            { Expression.Var($1) }
+| ID LSQ NUM RSQ                { Expression.ArrElem($1,$3) }
 ;
 
 /***********************************************************************/
@@ -152,8 +157,8 @@ stmt:
 | ID COLON stmt %prec LABEL     { Statement.Tagged($1,$3) }
 | STOP			        { Statement.Stop }
 | SKIP			        { Statement.Skip }
-| ID ASSIGN aexpr	        { Statement.Assign($1,$3) }
-| ID RANDOM range	        { Statement.Random($1,$3) }
+| varref ASSIGN aexpr	        { Statement.Assign($1,$3) }
+| varref RANDOM range	        { Statement.Random($1,$3) }
 | stmt SEMICOL stmt	        { Statement.Sequence($1,$3) }
 | IF bexpr THEN stmt ELSE stmt FI { Statement.If($2,$4,$6) }
 | WHILE bexpr DO stmt OD        { Statement.While($2,$4) }

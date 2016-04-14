@@ -10,8 +10,9 @@ type id =
 ;;
 
 type meta =
-    Primitive of range
-    (* add constants and arrays later? *)
+  | Primitive of range
+  | Array of int * range
+    (* add constants later? *)
 ;;
 
 type decl =
@@ -36,6 +37,31 @@ and maxInt =  4 (* truncates integers *)
 let range_of_variable meta =
   match meta with 
   | Primitive(r) -> r
+  | Array(l,r) -> r
+;;
+
+(**
+ *     size meta
+ *
+ * Return size of variable with metadata `meta`
+ *)
+let size meta =
+  match meta with
+  | Primitive(_) -> 1
+  | Array(l,_)  -> l
+;;
+
+(**
+ *     ordinals decls
+ *
+ * Return the list of ordinals corresponding to declarations `decls`
+ *)
+let ordinals decls =
+  let rec ordinals_aux decls cur =
+    match decls with
+    | [] -> []
+    | hd::tl -> cur :: ordinals_aux tl (cur + size(snd(hd)))
+  in ordinals_aux decls 1
 ;;
 
 (***********************************************************************)
@@ -50,11 +76,17 @@ let range_in_square_brackets rng =
   "[" ^ range_to_string rng ^ "]"
 ;;
 
+let range_in_braces rng =
+  "{" ^ range_to_string rng ^ "}"
+;;
+
 let meta_to_string meta =
   match meta with
   | Primitive(r) ->
-      let r = range_to_string r
-      in  "range {" ^ r ^ "}"
+      "range " ^ (range_in_braces r) 
+  | Array(l,r) ->
+      let l = string_of_int l
+      in "array, size: " ^ l ^ ", elements in range: " ^ (range_in_braces r)
 ;;
 
 (***********************************************************************)
@@ -110,32 +142,49 @@ let julia_dict name entries =
 
 (***********************************************************************)
 
-let id2ord (id,m) i =
+let id2ord_entry (id,m) i =
   (in_quotes id, string_of_int i)
 ;;
 
 let julia_ids2ord decls =
-  julia_dict "id2ord" (List.map2 id2ord decls (interval 1 (List.length decls)));
+  julia_dict "id2ord" (List.map2 id2ord_entry decls (ordinals decls));
 ;;
 
 (***********************************************************************)
 
-let id2rng (id,m) =
+let id2rng_entry (id,m) =
   (in_quotes id, range_in_square_brackets (range_of_variable m))
 ;;
 
 let julia_ids2rng decls =
-  julia_dict "id2rng" (List.map id2rng decls);
+  julia_dict "id2rng" (List.map id2rng_entry decls);
 ;;
 
 (***********************************************************************)
+let ord2rng_entries decls =
+  let rec ord2rng_entries_aux decls i ai =
+    match decls with
+    | [] -> []
+    | hd::tl -> 
+        begin match (snd hd) with
+        | Primitive(r) -> 
+            (string_of_int i, range_in_square_brackets r) 
+            :: ord2rng_entries_aux tl (i+1) ai
+        | Array(l,r) -> 
+            if ai == l then ord2rng_entries_aux tl i 0
+            else (string_of_int i, range_in_square_brackets r)
+            :: ord2rng_entries_aux decls (i+1) (ai+1)
+        end
+  in ord2rng_entries_aux decls 1 0
+;;
 
-let ord2rng (id,m) i =
+let ord2rng_entry i (id,m) =
   (string_of_int i, range_in_square_brackets (range_of_variable m))
 ;;
 
 let julia_ords2rng decls =
-  julia_dict "ord2rng" (List.map2 ord2rng decls (interval 1 (List.length decls)));
+  (*julia_dict "ord2rng" (List.map2 ord2rng_entry (ordinals decls) decls);*)
+  julia_dict "ord2rng" (ord2rng_entries decls)
 ;;
 
 (** 
@@ -174,9 +223,7 @@ let julia_decls decls =
 
       julia_separator ();
 
-      julia_string "const v = ";
-      julia_int (List.length decls);
-      julia_string " # number of variables\n\n";
+      julia_string "const v = length(ord2rng) # number of variables\n\n";
 
       julia_string "dims = Array{Int}(v)\n";
       julia_string "for i=1:v dims[i] = length(ord2rng[i]) end\n\n";

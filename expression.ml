@@ -1,8 +1,23 @@
 open Global
 
+type id = string
+;;
+
+type index = int
+;;
+
+(*
+type varref = 
+   | Var of id
+   | ArrElem of id * index  
+;;
+*)
+
 type aexpr =
-     Const of int
-   | Var of string
+   | Const of int
+   (*| Varref of varref*)
+   | Var of id
+   | ArrElem of id * index
    | Minus of aexpr
    | Sum  of aexpr * aexpr
    | Diff of aexpr * aexpr
@@ -40,7 +55,8 @@ type bexpr =
  *)
 type asp =
   {  const_sp : (int -> string) option;
-     var_sp   : (string -> string) option;
+     var_sp   : (id -> string) option;
+     arr_sp   : (id * index -> string) option;
      minus_sp : (aexpr -> string) option;
      sum_sp   : (aexpr * aexpr -> string) option;
      diff_sp  : (aexpr * aexpr -> string) option;
@@ -56,6 +72,7 @@ type asp =
 let default_asp =
   {  const_sp = None;  
      var_sp   = None;  
+     arr_sp   = None;  
      minus_sp = None;  
      sum_sp   = None;  
      diff_sp  = None; 
@@ -85,6 +102,8 @@ let rec aexpr_to_string ?aspo aexpr =
       to_string asp.const_sp c (string_of_int c)
   | Var(v) ->  
       to_string asp.var_sp v v
+  | ArrElem(a,i) ->
+      to_string asp.arr_sp (a,i) (a ^ "[" ^ (string_of_int i) ^ "]")
   | Minus(e) ->   
       let es = aexpr_to_string ~aspo:asp e
       in  to_string asp.minus_sp e ("(- " ^ es ^ ")")
@@ -218,8 +237,12 @@ let rec asp =
   { default_asp with 
     var_sp = (Some var); 
     div_sp = (Some div);
+    arr_sp = (Some arr);
   }
-and var v = "id2rng[\"" ^ v ^ "\"][" ^ "values[id2ord[\"" ^ v ^ "\"]]]" 
+and var v = id2rng v ^ "[values[" ^ id2ord v ^ "]]" 
+and arr (a,i) = 
+  let ordinal = id2ord a ^ " + " ^ (string_of_int i)
+  in id2rng a ^ "[values[" ^ ordinal ^ "]]" 
 and div (e1,e2) = 
   let e1 = aexpr_to_string ~aspo:asp e1
   and e2 = aexpr_to_string ~aspo:asp e2 
