@@ -66,7 +66,6 @@ let open_files () =
 
 let show_files () =
   begin
-    print_newline ();
     print_string "Source File: "; 
     print_string !srcName; 
     print_newline ();
@@ -103,7 +102,7 @@ let show_result declList syntaxTree =
 let start () =
   begin
     print_string "pwc 0.98 - pWhile compiler\n";
-    print_string "(c) 2008-16 H.Wiklicky, M.Olejnik\n";
+    print_string "(c) 2008-16 H.Wiklicky, M.Olejnik\n\n";
     if !flagVerbose then show_files ();
   end
 ;;
@@ -151,14 +150,15 @@ let main () =
 	let syntaxLabel = label_stmt syntaxTree in
 	let syntaxBlocks = blocks syntaxLabel in
 	let syntaxFlow = flow syntaxLabel in
-	(*let allocTable = (allocate 1 declList []) in*)
 	begin
 	  if !flagVerbose then ignore (print_lstmt syntaxLabel);
 	  if !flagVerbose then print_newline ();
-	  print_newline ();
+          populate declList;
+          print_string "symTbl size: ";
+          print_string (string_of_int (Hashtbl.length symTbl));
+	  ignore (print_decls declList);
 	  ignore (print_blocks syntaxBlocks);
 	  ignore (print_flow syntaxFlow);
-	  ignore (print_decls declList);
           (*-----*)
 	  ignore (julia_decls declList);
 	  ignore (julia_blocks syntaxBlocks);

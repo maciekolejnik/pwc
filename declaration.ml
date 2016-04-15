@@ -10,6 +10,7 @@ type id =
 ;;
 
 type meta = (** metadata of a variable *)
+  | Constant of int
   | Primitive of range
   | Array of int * range
 ;;
@@ -35,15 +36,32 @@ and maxInt =  4 (* truncates integers *)
 
 let range (_,m) =
   match m with 
+  | Constant(i) -> [i]
   | Primitive(r) -> r
-  | Array(l,r) -> r
+  | Array(_,r) -> r
 ;;
 
 let size (_,m) =
   match m with
+  | Constant(_) -> 0
   | Primitive(_) -> 1
   | Array(l,_)  -> l
 ;;
+
+(***********************************************************************)
+(** Hashtable                                                          *)
+(***********************************************************************)
+
+let symTbl : (id, meta) Hashtbl.t = Hashtbl.create 10
+;; 
+
+let addTo (id,m) =
+  Hashtbl.add symTbl id m
+;;
+
+let populate decls = List.iter addTo decls
+;;
+
 
 (***********************************************************************)
 (* Generic Output                                                      *)
@@ -63,8 +81,10 @@ let range_in_braces rng =
 
 let meta_to_string meta =
   match meta with
+  | Constant(i) ->
+      "value " ^ string_of_int i
   | Primitive(r) ->
-      "range " ^ (range_in_braces r) 
+      "range " ^ range_in_braces r
   | Array(l,r) ->
       let l = string_of_int l
       in "array, size: " ^ l ^ ", elements in range: " ^ (range_in_braces r)
@@ -84,7 +104,6 @@ let output_decl outch (id,m) =
 ;;
 
 let output_decls outch ds =
-  output_newline outch;
   output_string outch "Variables:\n";
   List.iter (output_decl outch) ds;
   output_newline outch
@@ -164,6 +183,7 @@ let ord2rng_entries decls =
             if m == l 
             then ord2rng_entries_aux tl i 0
             else (is,r) :: ord2rng_entries_aux decls (i+1) (m+1)
+        | _ -> ord2rng_entries_aux tl i m
         end
   in ord2rng_entries_aux decls 1 0
 ;;

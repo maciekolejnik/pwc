@@ -78,7 +78,8 @@ decls:
 ;
 
 decl:
-  ID COLON range		{ ($1, Declaration.Primitive($3)) }
+  ID COLON NUM                  { ($1, Declaration.Constant($3)) }
+| ID COLON range		{ ($1, Declaration.Primitive($3)) }
 | ID LSQ NUM RSQ COLON range    { ($1, Declaration.Array($3,$6)) } 
 ;
 
