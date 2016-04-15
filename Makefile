@@ -32,7 +32,7 @@ label.cmo: label.ml global.ml $(SYNTAXFILES)
 	$(OCAMLC) $(OCAMLFLAG) -g -c label.ml
 block.cmo: block.ml global.ml label.ml $(SYNTAXFILES)
 	$(OCAMLC) $(OCAMLFLAG) -g -c block.ml 
-flow.cmo: flow.ml global.ml label.ml $(SYNTAXFILES)
+flow.cmo: flow.ml global.ml label.ml statement.ml $(SYNTAXFILES) 
 	$(OCAMLC) $(OCAMLFLAG) -g -c flow.ml 
 statement.cmo: statement.ml global.ml declaration.ml expression.ml
 	$(OCAMLC) $(OCAMLFLAG) -g -c statement.ml

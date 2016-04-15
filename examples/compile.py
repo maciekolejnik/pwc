@@ -9,7 +9,7 @@ for file in glob.glob("*.pw"):
   sys.stdout.flush()
   p = subprocess.Popen(["pwc", basename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   out, err = p.communicate()
-  if err.strip() != "":
+  if p.returncode != 0:
     sys.stdout.write("\n")
     print(err)
   else:

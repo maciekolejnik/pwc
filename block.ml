@@ -61,7 +61,7 @@ let rec blocks lstmt =
        [(l, BGoto(gl))]
 and 
 caseBlock a ((l,i),s) = 
-  [(l, BTest(Equal(a,Const(i))))] @ (blocks s)
+  [(l, BTest(Equal(a,Num(i))))] @ (blocks s)
 ;;
 
 (***********************************************************************)

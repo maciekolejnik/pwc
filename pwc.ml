@@ -67,10 +67,9 @@ let abort msg =
   if !flagText   then Sys.remove !txtName; 
   if !flagLaTeX  then Sys.remove !texName; 
   if !flagJulia  then Sys.remove !julName;
-  print_string "ERROR: ";
-  print_string msg;
-  print_string ". Aborting...\n";
-  exit 0
+  output_string stderr msg;
+  output_string stderr ". Aborting...\n";
+  exit 1
 ;;
 
 (***********************************************************************)
@@ -129,9 +128,19 @@ let success lexbuf =
   end
 ;;
 
-let error lexbuf =
+let position lexbuf = 
   let line = string_of_int lexbuf.lex_curr_p.pos_lnum
-  in abort ("Parsing error in line " ^ line ^ " of " ^ !srcName)
+  and col  = string_of_int 
+               (lexbuf.lex_curr_p.pos_cnum - lexbuf.lex_curr_p.pos_bol)
+  in  (line, col)
+;;
+
+let error lexbuf =
+  let line, col = position lexbuf
+  and filename = in_quotes !srcName in
+  let loc = "File " ^ filename ^ ", line " ^ line ^ ", character " ^ col ^ ":\n"
+  and err = "Error: Unexpected token"
+  in abort(loc ^ err)
 ;;
 
 (***********************************************************************)
@@ -176,7 +185,7 @@ let main () =
         end
 
       with
-        | Parse_error -> error lexBuffer
+        | Parse_error | UnexpToken -> error lexBuffer
         | Failure msg -> abort msg
 
     end;

@@ -10,8 +10,6 @@ type lstmt =
    | LTagged of tag * lstmt
    | LAssign of label * varref * aexpr
    | LRandom of label * varref * range
-   (*| LAssign of label * aexpr * aexpr
-   | LRandom of label * aexpr * range*)
    | LSequence of lstmt * lstmt
    | LIf of label * bexpr * lstmt * lstmt
    | LWhile of label * bexpr * lstmt 

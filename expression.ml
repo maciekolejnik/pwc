@@ -13,7 +13,7 @@ type varref =
 ;;
 
 type aexpr =
-   | Const of int
+   | Num of int
    | Varref of varref
    | Minus of aexpr
    | Sum  of aexpr * aexpr
@@ -55,8 +55,7 @@ let default_vrsp =
      arr_sp = None;
   }
 
-let varref_to_string ?vrspo vr =
-  let vrsp = some_or_default vrspo default_vrsp in
+let varref_to_string ?(vrsp=default_vrsp) vr =
   match vr with
   | Var(v) -> to_string vrsp.var_sp v v
   | ArrElem(a,i) -> to_string vrsp.arr_sp (a,i) (a ^ "[" ^ string_of_int i ^ "]")
@@ -68,8 +67,8 @@ let varref_to_string ?vrspo vr =
  * Special printer data structure for aexpr 
  *)
 type asp =
-  {  const_sp : (int -> string) option;
-     vr_sp    : vrsp option;
+  {  num_sp   : (int -> string) option;
+     vr_sp    : vrsp;
      minus_sp : (aexpr -> string) option;
      sum_sp   : (aexpr * aexpr -> string) option;
      diff_sp  : (aexpr * aexpr -> string) option;
@@ -83,8 +82,8 @@ type asp =
 ;;
 
 let default_asp =
-  {  const_sp = None;  
-     vr_sp    = None;
+  {  num_sp   = None;  
+     vr_sp    = default_vrsp;
      minus_sp = None;  
      sum_sp   = None;  
      diff_sp  = None; 
@@ -98,25 +97,24 @@ let default_asp =
 ;;
 
 (**
- *     aexpr_to_string ?aspo aexpr
+ *     aexpr_to_string ?asp aexpr
  *
  * Return the string representation of `aexpr`, using 
- * the aexpr special printer `aspo` if present
+ * the aexpr special printer `asp` if present
  *)
-let rec aexpr_to_string ?aspo aexpr = 
-  let asp = some_or_default aspo default_asp in 
-  let vrsp = some_or_default asp.vr_sp default_vrsp in
+let rec aexpr_to_string ?(asp=default_asp) aexpr = 
+  (*let vrsp = some_or_default asp.vr_sp default_vrsp in*)
   let infix_operator sp op e1 e2 = 
-    let e1s = aexpr_to_string ~aspo:asp e1 
-    and e2s = aexpr_to_string ~aspo:asp e2
+    let e1s = aexpr_to_string ~asp:asp e1 
+    and e2s = aexpr_to_string ~asp:asp e2
     in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
   match aexpr with 
-  | Const(c) -> 
-      to_string asp.const_sp c (string_of_int c)
+  | Num(c) -> 
+      to_string asp.num_sp c (string_of_int c)
   | Varref(v) -> 
-      varref_to_string ~vrspo:vrsp v
+      varref_to_string ~vrsp:asp.vr_sp v
   | Minus(e) ->   
-      let es = aexpr_to_string ~aspo:asp e
+      let es = aexpr_to_string ~asp:asp e
       in  to_string asp.minus_sp e ("(- " ^ es ^ ")")
   | Sum(e1,e2) -> 
       infix_operator asp.sum_sp "+" e1 e2
@@ -172,22 +170,20 @@ let default_bsp =
 ;;
 
 (**
- *     bexpr_to_string ?aspo ?bspo bexpr
+ *     bexpr_to_string ?asp ?bsp bexpr
  *
  * Return the string representation of `bexpr`, using 
- * the aexpr special printer `aspo` and bexpr special
- * printer `bspo` if present
+ * the aexpr special printer `asp` and bexpr special
+ * printer `bsp` if present
  *)
-let rec bexpr_to_string ?aspo ?bspo bexpr = 
-  let asp = some_or_default aspo default_asp 
-  and bsp = some_or_default bspo default_bsp in
+let rec bexpr_to_string ?(asp=default_asp) ?(bsp=default_bsp) bexpr = 
   let aexpr_infix_operator sp op e1 e2 = 
-    let e1s = aexpr_to_string ~aspo:asp e1 
-    and e2s = aexpr_to_string ~aspo:asp e2
+    let e1s = aexpr_to_string ~asp:asp e1 
+    and e2s = aexpr_to_string ~asp:asp e2
     in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") 
   and bexpr_infix_operator sp op e1 e2 = 
-    let e1s = bexpr_to_string ~aspo:asp ~bspo:bsp e1 
-    and e2s = bexpr_to_string ~aspo:asp ~bspo:bsp e2
+    let e1s = bexpr_to_string ~asp:asp ~bsp:bsp e1 
+    and e2s = bexpr_to_string ~asp:asp ~bsp:bsp e2
     in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
   match bexpr with 
   | True -> 
@@ -195,7 +191,7 @@ let rec bexpr_to_string ?aspo ?bspo bexpr =
   | False ->  
       to_string bsp.false_sp () "false"
   | Not(e) ->   
-      let es = bexpr_to_string ~aspo:asp ~bspo:bsp e
+      let es = bexpr_to_string ~asp:asp ~bsp:bsp e
       in  to_string bsp.not_sp e ("(- " ^ es ^ ")")
   | And(e1,e2) -> 
       bexpr_infix_operator bsp.and_sp "&&" e1 e2
@@ -255,7 +251,7 @@ let rec julia_asp =
     }
   in
   { default_asp with 
-    vr_sp  = (Some varref); 
+    vr_sp  = varref; 
     div_sp = (Some div);
   }
 and var v = 
@@ -270,17 +266,17 @@ and arr (a,i) =
   let ordinal = id2ord a ^ " + " ^ (string_of_int i)
   in id2rng a ^ in_sq_brackets (values ordinal) 
 and div (e1,e2) = 
-  let e1 = aexpr_to_string ~aspo:julia_asp e1
-  and e2 = aexpr_to_string ~aspo:julia_asp e2 
+  let e1 = aexpr_to_string ~asp:julia_asp e1
+  and e2 = aexpr_to_string ~asp:julia_asp e2 
   in "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
 ;;
 
 let aexpr_to_julia_string e =
-  aexpr_to_string ~aspo:julia_asp e
+  aexpr_to_string ~asp:julia_asp e
 ;;
 
 let bexpr_to_julia_string e =
-  bexpr_to_string ~aspo:julia_asp e
+  bexpr_to_string ~asp:julia_asp e
 ;;
 
 (** 
@@ -293,7 +289,7 @@ let bexpr_to_julia_string e =
  *  division operation
  *)
 let julia_aexpr e = 
-  julia_string (aexpr_to_string ~aspo:julia_asp e)
+  julia_string (aexpr_to_string ~asp:julia_asp e)
 ;;
 
 (** 
@@ -306,6 +302,6 @@ let julia_aexpr e =
  *  division operation
  *)
 let julia_bexpr e =
-  julia_string (bexpr_to_string ~aspo:julia_asp e)
+  julia_string (bexpr_to_string ~asp:julia_asp e)
 ;;
 

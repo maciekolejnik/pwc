@@ -9,8 +9,6 @@ type stmt =
    | Tagged of tag * stmt
    | Assign of varref * aexpr
    | Random of varref * range
-   (*| Assign of aexpr * aexpr
-   | Random of aexpr * range*)
    | Sequence of stmt * stmt
    | If of bexpr * stmt * stmt
    | While of bexpr * stmt 
@@ -62,8 +60,6 @@ type ssp =
      tagged_sp   : (tag * stmt -> string) option;
      assign_sp   : (varref * aexpr -> string) option;
      random_sp   : (varref * range -> string) option;
-     (*assign_sp   : (aexpr * aexpr -> string) option;
-     random_sp   : (aexpr * range -> string) option;*)
      sequence_sp : (stmt * stmt -> string) option;
      if_sp       : (bexpr * stmt * stmt -> string) option;
      while_sp    : (bexpr * stmt -> string) option;
@@ -92,58 +88,52 @@ let default_ssp =
   }
 ;;
 
-let rec stmt_to_string ?sspo ?aspo ?bspo stmt =
-  let ssp = some_or_default sspo default_ssp 
-  and asp = some_or_default aspo default_asp 
-  and bsp = some_or_default bspo default_bsp in 
-  let vrsp = some_or_default asp.vr_sp default_vrsp
-  in
+let rec stmt_to_string 
+            ?(ssp=default_ssp) ?(asp=default_asp) ?(bsp=default_bsp) stmt =
   match stmt with 
   | Stop -> 
       to_string ssp.stop_sp () "stop"
   | Skip -> 
       to_string ssp.skip_sp () "skip"
   | Tagged(t,s) -> 
-      let ss = stmt_to_string ~sspo:ssp s 
+      let ss = stmt_to_string ~ssp:ssp s 
       in  to_string ssp.tagged_sp (t,s) (t ^ ": " ^ ss)
   | Assign(x,a) -> 
-      (*let xs = aexpr_to_string ~aspo:asp x*)
-      let xs = varref_to_string ~vrspo:vrsp x
-      and e = aexpr_to_string ~aspo:asp a
+      let xs = varref_to_string ~vrsp:asp.vr_sp x
+      and e = aexpr_to_string ~asp:asp a
       in  to_string ssp.assign_sp (x,a) (xs ^ " := " ^ e)
   | Random(x,r) -> 
-      (*let xs = aexpr_to_string ~aspo:asp x*)
-      let xs = varref_to_string ~vrspo:vrsp x
+      let xs = varref_to_string ~vrsp:asp.vr_sp x
       and rs = range_to_string r
       in  to_string ssp.random_sp (x,r) (xs ^ " ?= {" ^ rs ^ "}")
   | Sequence(s1,s2) ->
-      let s1s = stmt_to_string ~sspo:ssp s1
-      and s2s = stmt_to_string ~sspo:ssp s2
+      let s1s = stmt_to_string ~ssp:ssp s1
+      and s2s = stmt_to_string ~ssp:ssp s2
       in  to_string ssp.sequence_sp (s1,s2) (s1s ^ "; " ^ s2s)
   | If(b,s1,s2) -> 
-      let bs  = bexpr_to_string ~aspo:asp ~bspo:bsp b
-      and s1s = stmt_to_string ~sspo:ssp s1
-      and s2s = stmt_to_string ~sspo:ssp s2
+      let bs  = bexpr_to_string ~asp:asp ~bsp:bsp b
+      and s1s = stmt_to_string ~ssp:ssp s1
+      and s2s = stmt_to_string ~ssp:ssp s2
       in  to_string ssp.if_sp (b,s1,s2) ("if "^ bs ^" then "^ s1s ^" else "^ s2s)
   | While(b,s) ->
-      let bs = bexpr_to_string ~bspo:bsp b
-      and ss = stmt_to_string ~sspo:ssp s
+      let bs = bexpr_to_string ~bsp:bsp b
+      and ss = stmt_to_string ~ssp:ssp s
       in  to_string ssp.while_sp (b,s) ("while " ^ bs ^ " do " ^ ss ^ " od") 
   | For(i,b,u,s) ->
-      let is = stmt_to_string ~sspo:ssp i
-      and bs = bexpr_to_string ~aspo:asp ~bspo:bsp b
-      and us = stmt_to_string ~sspo:ssp s
-      and ss = stmt_to_string ~sspo:ssp s
+      let is = stmt_to_string ~ssp:ssp i
+      and bs = bexpr_to_string ~asp:asp ~bsp:bsp b
+      and us = stmt_to_string ~ssp:ssp s
+      and ss = stmt_to_string ~ssp:ssp s
       in  to_string ssp.for_sp (i,b,u,s) 
           ("for " ^ is ^ "; " ^ bs ^ "; " ^ us ^ " do" ^ ss ^ " od")
   | Case(a,l,d) -> 
-      let e = aexpr_to_string ~aspo:asp a
+      let e = aexpr_to_string ~asp:asp a
       and ls = cstmts_to_string l
-      and ds = stmt_to_string ~sspo:ssp d
+      and ds = stmt_to_string ~ssp:ssp d
       in  to_string ssp.case_sp (a,l,d) ("case " ^ e ^ ls ^ " default: " ^ ds)
   | Repeat(s,b) ->
-      let ss = stmt_to_string ~sspo:ssp s
-      and bs = bexpr_to_string ~aspo:asp ~bspo:bsp b
+      let ss = stmt_to_string ~ssp:ssp s
+      and bs = bexpr_to_string ~asp:asp ~bsp:bsp b
       in  to_string ssp.repeat_sp (s,b) ("repeat " ^ ss ^ " until " ^ bs)
   | Choose(l) ->
       let ls = wstmts_to_string l

@@ -41,17 +41,9 @@ let rec final lstmt =
 
 (***********************************************************************)
 
-type context = Statement.weight * Statement.weight list
-;;
-
-let drop_context flowlist =
-   let decontext (i,(w,c),f) = (i,w,f) in
-   List.map decontext flowlist
-;;
-
 let rec tags lstmt = 
   match lstmt with 
-    LWhile(l,b,s) -> (tags s)
+  | LWhile(l,b,s) -> (tags s)
   | LFor(l,i,b,u,s) -> (tags i) @ (tags u) @ (tags s)
   | LCase(a,cls,d) -> (List.flatten (List.map tags (List.map snd cls)))
   | LRepeat(l,s,b) -> (tags s)
@@ -71,7 +63,7 @@ let flow lstmt =
     and compose f g x = f (g x) 
     and dropLast l = List.rev (List.tl (List.rev l)) in
     match lstmt with 
-      LStop(l) ->
+    | LStop(l) ->
         [(link l l)]
     | LSkip(l) ->
         []

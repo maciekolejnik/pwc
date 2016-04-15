@@ -169,20 +169,6 @@ let to_string po v d =
   | Some p -> p v 
 ;;
 
-(**
- *     some_or_default opt def
- *
- * @param `opt` is an option of any type ('a option)
- * @param `def` is the default value
- *
- * @return `def` if option is None, `opt` value otherwise
- *)
-let some_or_default opt def =
-  match opt with
-  | None -> def
-  | Some x -> x
-;;
-
 (** 
  * The following four functions deal with arithemtic of
  * (nonnegative) rational numers. They are used to 

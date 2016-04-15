@@ -4,10 +4,14 @@
   open Lexing
 
   exception EOF
+  exception UnexpToken 
 
   let incrline lexbuf =
-      lexbuf.lex_curr_p <- {
-      lexbuf.lex_curr_p with pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
+      lexbuf.lex_curr_p <- 
+        { lexbuf.lex_curr_p with 
+            pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum;
+            pos_bol  = lexbuf.lex_curr_p.pos_cnum;
+        }
 
   let rational_of_string s =
     let r = (Str.split (Str.regexp "//") s) in
@@ -114,6 +118,7 @@ rule token = parse
 | rational as r      { RAT (rational_of_string r) }
 | id as id           { ID id }
 
+| _                  { raise UnexpToken }
 | eof                { raise EOF }
 
 (***********************************************************************)

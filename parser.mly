@@ -115,7 +115,7 @@ block:
 
 aexpr:
   LPAR aexpr RPAR		{ $2 }
-| NUM			        { Expression.Const($1) }
+| NUM			        { Expression.Num($1) }
 | varref                        { Expression.Varref($1) }
 | MINUS aexpr %prec UMINUS      { Expression.Minus($2) }
 | aexpr PLUS aexpr	        { Expression.Sum($1,$3) }
