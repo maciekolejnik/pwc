@@ -31,6 +31,22 @@ and maxInt =  4 (* truncates integers *)
 ;;
 
 (***********************************************************************)
+(** Symbol Table                                                       *)
+(***********************************************************************)
+
+let symTbl : (id, meta) Hashtbl.t = Hashtbl.create 10
+;; 
+
+let populateSymTbl decls = 
+  let add (id,m) = Hashtbl.add symTbl id m
+  in  List.iter add decls
+;;
+
+let meta id =
+  Hashtbl.find symTbl id
+;;
+
+(***********************************************************************)
 (** Auxiliary                                                          *)
 (***********************************************************************)
 
@@ -47,21 +63,6 @@ let size (_,m) =
   | Primitive(_) -> 1
   | Array(l,_)  -> l
 ;;
-
-(***********************************************************************)
-(** Hashtable                                                          *)
-(***********************************************************************)
-
-let symTbl : (id, meta) Hashtbl.t = Hashtbl.create 10
-;; 
-
-let addTo (id,m) =
-  Hashtbl.add symTbl id m
-;;
-
-let populate decls = List.iter addTo decls
-;;
-
 
 (***********************************************************************)
 (* Generic Output                                                      *)

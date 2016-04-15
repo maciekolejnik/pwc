@@ -45,7 +45,7 @@ lexer.cmo: lexer.ml statement.ml
 	$(OCAMLC) $(OCAMLFLAG) -c lexer.ml
 lexer.ml: lexer.mll global.ml $(SYNTAXFILES)
 	$(OCAMLLEX) lexer.mll
-expression.cmo: expression.ml global.ml
+expression.cmo: expression.ml global.ml declaration.ml
 	$(OCAMLC) $(OCAMLFLAG) -g -c expression.ml
 declaration.cmo: declaration.ml global.ml
 	$(OCAMLC) $(OCAMLFLAG) -g -c declaration.ml

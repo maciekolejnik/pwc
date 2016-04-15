@@ -150,45 +150,6 @@ let output_flow outch flow =
 
 let print_flow f = output_flow stdout f;;
 
-(*
-let print_weight p =
-  match p with (***************)
-    Statement.CWeight(w) -> print_int w;
-  | Statement.PWeight(w) -> print_string w;
-;;
-
-let print_step (i,p,f) =
-  print_string "(";
-  print_int i;
-  print_string ", ";
-  print_weight p; (***************)
-  print_string ", ";
-  print_int f;
-  print_string ")";
-  print_newline ()
-;;
-
-let print_flow steps =
-  (* List.map print_step steps *)
-  let si = ref 1 in
-  let print_steps (i,p,f) =
-    begin
-      print_int !si; si := !si + 1;
-      print_string " - (";
-      print_int i;
-      print_string ", ";
-      print_weight p; (***************)
-      print_string ", ";
-      print_int f;
-      print_string ")";
-      print_newline ()
-    end
-  in
-  print_string "Control Flow:\n";
-  List.iter print_steps steps
-;;
-*)
-
 (***********************************************************************)
 (** Julia Output                                                       *)
 (***********************************************************************)

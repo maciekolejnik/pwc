@@ -56,10 +56,21 @@ let open_files () =
     if !flagVerbose then print_string "Open Output Files";
     if !flagVerbose then print_newline ();
     if !flagBinary then fidBinary := open_out !binName;
-    if !flagText then fidText := open_out !txtName;
-    if !flagLaTeX then fidLaTeX := open_out !texName;
-    if !flagJulia then fidJulia := open_out !julName;
+    if !flagText   then fidText := open_out !txtName;
+    if !flagLaTeX  then fidLaTeX := open_out !texName;
+    if !flagJulia  then fidJulia := open_out !julName;
   end
+;;
+
+let abort msg =
+  if !flagBinary then Sys.remove !binName; 
+  if !flagText   then Sys.remove !txtName; 
+  if !flagLaTeX  then Sys.remove !texName; 
+  if !flagJulia  then Sys.remove !julName;
+  print_string "ERROR: ";
+  print_string msg;
+  print_string ". Aborting...\n";
+  exit 0
 ;;
 
 (***********************************************************************)
@@ -119,13 +130,8 @@ let success lexbuf =
 ;;
 
 let error lexbuf =
-  begin
-    print_string "Parsing Error in line ";
-    print_int lexbuf.lex_curr_p.pos_lnum;    
-    print_string " of ";
-    print_string !srcName;
-    print_newline ();
-  end
+  let line = string_of_int lexbuf.lex_curr_p.pos_lnum
+  in abort ("Parsing error in line " ^ line ^ " of " ^ !srcName)
 ;;
 
 (***********************************************************************)
@@ -136,41 +142,46 @@ let main () =
   start ();
   open_files ();
 
-  let srcFile = open_in !srcName in
-  let lexBuffer = Lexing.from_channel srcFile in
-  begin
-    try
+  try 
+    let srcFile = open_in !srcName in
+    let lexBuffer = Lexing.from_channel srcFile in
 
-      let (declList, syntaxTree) = Parser.prog Lexer.token lexBuffer in
-      begin
-	
-	if !flagVerbose then 
-	  show_result declList syntaxTree;
-	
-	let syntaxLabel = label_stmt syntaxTree in
-	let syntaxBlocks = blocks syntaxLabel in
-	let syntaxFlow = flow syntaxLabel in
-	begin
-	  if !flagVerbose then ignore (print_lstmt syntaxLabel);
-	  if !flagVerbose then print_newline ();
-          populate declList;
-          print_string "symTbl size: ";
-          print_string (string_of_int (Hashtbl.length symTbl));
-	  ignore (print_decls declList);
-	  ignore (print_blocks syntaxBlocks);
-	  ignore (print_flow syntaxFlow);
-          (*-----*)
-	  ignore (julia_decls declList);
-	  ignore (julia_blocks syntaxBlocks);
-	  ignore (julia_flow syntaxFlow);
-	  print_newline ();
-	end;
-	success lexBuffer;
-      end
+    begin
+      try
 
-    with Parse_error -> 
-      error lexBuffer
-  end;
+        let (declList, syntaxTree) = Parser.prog Lexer.token lexBuffer in
+        begin
+          
+          if !flagVerbose then 
+            show_result declList syntaxTree;
+          
+          let syntaxLabel = label_stmt syntaxTree in
+          let syntaxBlocks = blocks syntaxLabel in
+          let syntaxFlow = flow syntaxLabel in
+          begin
+            if !flagVerbose then ignore (print_lstmt syntaxLabel);
+            if !flagVerbose then print_newline ();
+            populateSymTbl declList;
+            ignore (print_decls declList);
+            ignore (print_blocks syntaxBlocks);
+            ignore (print_flow syntaxFlow);
+            print_newline ();
+            (*-----*)
+            ignore (julia_decls declList);
+            ignore (julia_blocks syntaxBlocks);
+            ignore (julia_flow syntaxFlow);
+            print_newline ();
+          end;
+          success lexBuffer;
+        end
+
+      with
+        | Parse_error -> error lexBuffer
+        | Failure msg -> abort msg
+
+    end;
+  with Sys_error msg -> 
+    abort msg
 ;;
 
 (***********************************************************************)

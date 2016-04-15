@@ -1,4 +1,5 @@
 open Global
+open Declaration
 
 type id = string
 ;;
@@ -257,11 +258,14 @@ let rec julia_asp =
     vr_sp  = (Some varref); 
     div_sp = (Some div);
   }
-(*and var v = id2rng v ^ in_sq_brackets (values v) *)
 and var v = 
-  match Hashtbl.find Declaration.symTbl v with
-  | Constant(i) -> string_of_int i
-  | _ -> id2rng v ^ in_sq_brackets (values v) 
+  try
+    match meta v with
+    | Constant(i) -> string_of_int i
+    | Primitive(_) -> id2rng v ^ in_sq_brackets (values (id2ord v)) 
+    | Array(_,_) -> failwith ("Variable " ^ v ^ " has been declared as array")
+  with Not_found ->
+    failwith ("Variable " ^ v ^ " has not been declared")
 and arr (a,i) = 
   let ordinal = id2ord a ^ " + " ^ (string_of_int i)
   in id2rng a ^ in_sq_brackets (values ordinal) 
