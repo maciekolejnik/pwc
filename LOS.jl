@@ -19,17 +19,29 @@
 Return sparse identity matrix of dimension `dim`
 """
 function I(dim)
-  return speye(Int, dim)
+  return speye(Int,dim)
+end
+
+"""
+    E(m, n, i, j)
+
+Return sparse `m` by `n` matrix with `ij`-entry 1, others 0
+"""
+function E(m, n, i, j)
+  @assert valid_index(m, i) && valid_index(n, j)
+  R = spzeros(Int,m,n)
+  R[i,j] = 1
+  return R
 end
 
 """
     E(dim, i, j)
 
-Return sparse matrix with `ij`-entry 1, others 0, dimension `dim`
+Return sparse square matrix with `ij`-entry 1, others 0, dimension `dim`
 """
 function E(dim, i, j)
   @assert valid_index(dim, i) && valid_index(dim, j)
-  R = spzeros(dim, dim)
+  R = spzeros(Int,dim, dim)
   R[i,j] = 1
   return R
 end
@@ -46,12 +58,12 @@ end
 """
     U_c(dim,c)
 
-Return sparse matrix of dimension `dim` with entries
+Return sparse square matrix of dimension `dim` with entries
 in `c`th column 1, otherwise 0
 """
 function U_c(dim,c) 
   @assert valid_index(dim, c)
-  R = spzeros(dim, dim)
+  R = spzeros(Int,dim,dim)
   for i = 1:dim
     R[i,c] = 1
   end
@@ -66,7 +78,7 @@ position `i`, zeros otheriwse
 """
 function e_i(dim,i)
   @assert valid_index(dim, i)
-  R = spzeros(1, dim)
+  R = spzeros(Int,1,dim)
   R[i] = 1
   return R
 end
@@ -141,7 +153,7 @@ to the integer representation `i`
 # Example
 ```julia
 julia> unindex([2,2], 3)
-2-element Array(Int64,1}:
+2-element Array{Int64,1}:
  2
  1
 ```
@@ -184,6 +196,113 @@ function valid_index(dim, i)
   return i > 0 && i <= dim
 end
 
+"""
+    swap_array(ordinals)
+
+Return the array of 'swaps', which is a permutation of `ordinals` 
+that maximizes number of positions `i`
+
+# Example
+```julia
+julia> swap_array([2,4,6,7])
+4-element Array{Int64,1}:
+ 6
+ 2
+ 7
+ 4
+```
+"""
+function swap_array(ordinals::Array{Int,1})
+  n = length(ordinals)
+  a = fill(0, (1,n))
+  min = 1
+  for i in ordinals
+    if i <= n 
+      a[i] = i
+    else
+      while a[min] != 0
+        min += 1
+      end
+      a[min] = i
+    end
+  end
+  return a
+end
+
+function swap!(arr, i, j)
+  @assert valid_index(length(arr), i) && valid_index(length(arr), j)
+  if i != j
+    arr[i], arr[j] = arr[j], arr[i] 
+  end
+end
+
+function compute_swaps(ordinals::Array{Int,1})
+  result = sort(union(ordinals))
+  n = length(result)
+  for i = n:-1:1
+    if result[i] <= n && result[i] != i
+      swap!(result, i, result[i])
+    end
+  end
+  return result
+end
+
+function compute_swapped_dims(dims::Array{Int,1}, swaps::Array{Int,1})
+  result = copy(dims)
+  for i = 1:length(swaps)
+    swap!(result, i, swaps[i])
+  end
+  return result
+end
+
+function extend(values::Array{Int,1}, ordinals::Array{Int,1}, n::Int) 
+  for i in ordinals
+    @assert i <= n
+  end
+  result = squeeze(ones(Int,1,n),1)
+  for i = 1:length(ordinals)
+    result[ordinals[i]] = values[i]
+  end
+  return result
+end
+
+function compute_swap_operator(dims, p, q)
+  @assert valid_index(length(dims), p) && valid_index(length(dims), q)
+  d = prod(dims)
+  if p == q
+    return I(d)
+  end
+  R = spzeros(Int,d,d)
+  for i = 1:dims[p]
+    for j = 1:dims[q]
+      A = I(1)
+      for k = 1:p-1
+        A = kron(A,I(dims[k]))
+      end
+      A = kron(A,E(dims[p],dims[q],i,j))
+      for k = p+1:q-1
+        A = kron(A,I(dims[k]))
+      end
+      A = kron(A,transpose(E(dims[p],dims[q],i,j))) 
+      for k = q+1:length(dims)
+        A = kron(A,I(dims[k]))
+      end
+      R += A
+    end
+  end
+  return R
+end
+
+function compute_swaps_operator(dims::Array{Int,1}, swaps::Array{Int,1})
+  R = I(prod(dims))
+  for i = 1:length(swaps)
+    if i != swaps[i]
+      R = R * compute_swap_operator(dims, i, swaps[i])
+    end
+  end
+  return R
+end
+
 #--------------------------------------------------------------------
 # State update operators and filter operators
 #--------------------------------------------------------------------
@@ -201,6 +320,31 @@ function U_xk_c(dims, k, c)
   return R
 end
 
+function Ue(dims::Array{Int,1}, ordinal::Int, ordinals::Array{Int,1}, update::Function)
+  swaps = compute_swaps(push!(copy(ordinals), ordinal))
+  n = length(swaps)
+  dims_swapped = compute_swapped_dims(dims, swaps)
+  dims_restricted = dims_swapped[1:n]
+  newordinal = findfirst(swaps, ordinal)
+  d = prod(dims_restricted)
+  R = spzeros(d,d)
+  for i = 1:d
+    values_restricted = unindex(dims_restricted, i)
+    values = extend(values_restricted, swaps, length(dims))
+    values_restricted[newordinal] = update(values)
+    if values_restricted[newordinal] > 0
+      R[i, index(dims_restricted, values_restricted)] = 1
+    end
+  end
+  for dim in dims_swapped[n+1:end]
+    R = kron(R,I(dim))
+  end
+  K = compute_swaps_operator(dims, swaps)
+  return K * R * K 
+end
+
+# old update expression operator which doesnt take into account how many variables
+# are involved in the expression
 function Ue(dims::Array{Int,1}, ordinal::Int, update::Function)
   @assert ordinal <= length(dims)
   d = prod(dims)
@@ -221,7 +365,7 @@ function Ur(dims::Array{Int,1}, ordinal::Int,
   d = prod(dims)
   values = findall(assign_range, range)
   result = spzeros(d,d)
-  for i in values
+  for i in values 
     result += Uc(dims, ordinal, i)
   end
   return 1//length(values) * result

@@ -4,10 +4,10 @@ var
   c : 1;
 
 begin
-c := x;
-if a[0] == 1
-then x := 0
-else x := 1
-fi;
+case x
+  of 0: skip
+  of 1: skip
+  of 2: skip
+esac;
 stop
 end

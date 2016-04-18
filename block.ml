@@ -120,7 +120,8 @@ let fraction r = "1//" ^ string_of_int (List.length r)
 ;;
 
 let p l b   = "P(dims, test" ^ l ^ ", " ^ string_of_bool b ^ ")"
-and ue ord l = "Ue(dims, " ^ ord ^ ", assign" ^ l ^")"
+(*and ue ord l = "Ue(dims, " ^ ord ^ ", assign" ^ l ^")"*)
+and ue ord ords l = "Ue(dims, " ^ ord ^ ", " ^ ords ^ ", assign" ^ l ^")"
 and uc ord i = "U_xk_c(dims, " ^ ord ^ ", " ^ i ^ ")"
 and ff id i = "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
 ;;
@@ -130,6 +131,12 @@ let ucs id ord r = List.map (fun i -> uc ord (ff id (string_of_int i))) r
 
 let ur id ord r = 
   fraction r ^ "*(" ^ (String.concat " +\n\t" (ucs id ord r)) ^ ")" 
+;;
+
+let varref2ord varref =
+  match varref with
+  | Var(v) -> id2ord v
+  | ArrElem(a,i) -> id2ord a ^ "+" ^ string_of_int i
 ;;
 
 (***********************************************************************)
@@ -149,19 +156,17 @@ let julia_operator (l,blk) =
       julia_assignment (fl ^ "f") (p l false);
       julia_assignment (fl) ("F" ^ l ^ "f")
   | BAsn(x,a) ->
-      begin match x with
-      | Var(v) -> julia_assignment fl (ue (id2ord v) l)
-      | ArrElem(v,i) -> 
-          let ord = id2ord v ^ "+" ^ string_of_int i 
-          in julia_assignment fl (ue ord l)
-      end
+      let varrefs = variables a in
+      let ord = varref2ord x in
+      let ords = String.concat "," (List.map varref2ord varrefs) in
+      let ords = "round(Int, [" ^ ords ^ "])"
+      (*in  julia_assignment fl (ue (varref2ord x) l)*)
+      in  
+      if List.length varrefs == 0
+      then julia_assignment fl (uc ord (ff (id x) (aexpr_to_julia_string a)))
+      else julia_assignment fl (ue ord ords l)
   | BRnd(x,r) ->
-      begin match x with
-      | Var(v) -> julia_assignment fl (ur v (id2ord v) r)
-      | ArrElem(v,i) -> 
-          let ord = id2ord v ^ "+" ^ string_of_int i 
-          in julia_assignment fl (ur v ord r)
-      end
+      julia_assignment fl (ur (id x) (varref2ord x) r)
   | _ -> 
       julia_assignment fl "I(d)" 
 ;;

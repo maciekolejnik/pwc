@@ -29,7 +29,7 @@ type aexpr =
 (***********************************************************************)
 
 type bexpr =
-     True
+   | True
    | False
    | Not of bexpr
    | And of bexpr * bexpr
@@ -40,6 +40,32 @@ type bexpr =
    | GrEqual of aexpr * aexpr
    | Greater of aexpr * aexpr
 ;;
+
+(***********************************************************************)
+(** Auxiliary                                                          *)
+(***********************************************************************)
+
+let rec variables aexpr = 
+  match aexpr with
+  | Num(n) -> []
+  | Varref(v) -> [v]
+  | Minus(e) -> variables e
+  | Sum(e1,e2) -> variables e1 @ variables e2
+  | Diff(e1,e2) -> variables e1 @ variables e2
+  | Prod(e1,e2) -> variables e1 @ variables e2
+  | Div(e1,e2) -> variables e1 @ variables e2
+  | Mod(e1,e2) -> variables e1 @ variables e2
+  | BXor(e1,e2) -> variables e1 @ variables e2
+  | BAnd(e1,e2) -> variables e1 @ variables e2
+  | BOr(e1,e2) -> variables e1 @ variables e2
+;;
+
+let id varref = 
+  match varref with
+  | Var(v) -> v
+  | ArrElem(a,i) -> a
+;;
+
 
 (***********************************************************************)
 (** Generic Output                                                     *)
