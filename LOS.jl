@@ -192,43 +192,43 @@ function index(dims::Array{Int,1}, values::Array{Int,1})
   end
 end
 
-function valid_index(dim, i)
-  return i > 0 && i <= dim
-end
-
 """
-    swap_array(ordinals)
+    valid_index(len, i)
 
-Return the array of 'swaps', which is a permutation of `ordinals` 
-that maximizes number of positions `i`
+Check whether `i` is a valid index into a vector of length `len`
 
 # Example
 ```julia
-julia> swap_array([2,4,6,7])
-4-element Array{Int64,1}:
- 6
- 2
- 7
- 4
+julia> valid_index(5,2)
+true 
+
+julia> valid_index(5,0)
+false
 ```
 """
-function swap_array(ordinals::Array{Int,1})
-  n = length(ordinals)
-  a = fill(0, (1,n))
-  min = 1
-  for i in ordinals
-    if i <= n 
-      a[i] = i
-    else
-      while a[min] != 0
-        min += 1
-      end
-      a[min] = i
-    end
-  end
-  return a
+function valid_index(len, i)
+  return i > 0 && i <= len
 end
 
+"""
+    swap!(arr, i, j)
+
+Swaps elements at positions `i` and `j` in an array `arr`, in place.
+Assumes `i` and `j` are valid indexes into the array.
+
+# Example
+```julia
+julia> arr = [1,2,3,4,5]
+julia> swap!(arr,2,4)
+julia> arr
+5-element Array{Int64,1}:
+ 1
+ 4
+ 3
+ 2
+ 5
+```
+"""
 function swap!(arr, i, j)
   @assert valid_index(length(arr), i) && valid_index(length(arr), j)
   if i != j
@@ -236,6 +236,30 @@ function swap!(arr, i, j)
   end
 end
 
+"""
+    compute_swaps(ordinals)
+
+Given `ordinals` (of variables that appear in an arithmetic expression)
+compute how variables need to be swapped to minimise the number of swaps.
+Using the fact that variables will be swapped into positions 1,2,...,n, 
+where n is length of `ordinals`, the swaps are represented as an array 
+of length n. 
+
+# Example
+```julia
+julia> compute_swaps([7,1,6,4])
+4-element Array{Int64,1}:
+ 1
+ 7
+ 6
+ 4
+```
+Here the resulting array represents the swaps:
+  2 <=> 7
+  3 <=> 6
+
+1 and 4 don't need to be swapped since they belong to the first 4 ordinals
+"""
 function compute_swaps(ordinals::Array{Int,1})
   result = sort(union(ordinals))
   n = length(result)
@@ -247,6 +271,23 @@ function compute_swaps(ordinals::Array{Int,1})
   return result
 end
 
+"""
+    compute_swapped_dims(dims, swaps)
+
+Given variable dimensions in the intial order `dims`, compute
+the dimensions order after the swap represented by `swaps`
+(so returned value is a permutation of `dims`)
+
+# Example
+```julia
+julia> compute_swapped_dims([3,3,2,2], [3,4])
+4-element Array{Int64,1}:
+ 2
+ 2
+ 3
+ 3
+```
+"""
 function compute_swapped_dims(dims::Array{Int,1}, swaps::Array{Int,1})
   result = copy(dims)
   for i = 1:length(swaps)
@@ -255,18 +296,47 @@ function compute_swapped_dims(dims::Array{Int,1}, swaps::Array{Int,1})
   return result
 end
 
-function extend(values::Array{Int,1}, ordinals::Array{Int,1}, n::Int) 
+"""
+    extend(values_restricted, ordinals, n)
+
+Extend the restricted vector of variables values `values_restricted`
+to a full vector of length `n`, where the values of variables with
+ordinals in `ordinals` are specified in `values_restricted`. Other
+values are set to 1.
+
+# Example
+```julia
+julia> extend([3,2,4],[1,5,4],6)
+6-element Array{Int64,1}:
+ 3
+ 1
+ 1
+ 4
+ 2
+ 1
+```
+"""
+function extend(values_restricted::Array{Int,1}, ordinals::Array{Int,1}, n::Int) 
   for i in ordinals
     @assert i <= n
   end
+  @assert length(values_restricted) == length(ordinals)
   result = squeeze(ones(Int,1,n),1)
   for i = 1:length(ordinals)
-    result[ordinals[i]] = values[i]
+    result[ordinals[i]] = values_restricted[i]
   end
   return result
 end
 
-function compute_swap_operator(dims, p, q)
+"""
+    compute_swap_operator(dims, p, q)
+
+Compute operator (i.e. matrix) that swaps `p`th and `q`th variables
+It is based on an idea of a commutator matrix which makes Kronecker
+product commute. 
+
+"""
+function compute_swap_operator(dims::Array{Int,1}, p::Int, q::Int)
   @assert valid_index(length(dims), p) && valid_index(length(dims), q)
   d = prod(dims)
   if p == q
@@ -293,11 +363,19 @@ function compute_swap_operator(dims, p, q)
   return R
 end
 
+"""
+    compute_swaps_operator(dims, swaps)
+
+Compute operator (i.e. matrix) that swaps variables as represented by
+`swaps` vector. It is the product of swap operators for each individual 
+swap
+
+"""
 function compute_swaps_operator(dims::Array{Int,1}, swaps::Array{Int,1})
   R = I(prod(dims))
   for i = 1:length(swaps)
     if i != swaps[i]
-      R = R * compute_swap_operator(dims, i, swaps[i])
+        R = R * compute_swap_operator(dims, i, swaps[i])
     end
   end
   return R
@@ -306,8 +384,19 @@ end
 #--------------------------------------------------------------------
 # State update operators and filter operators
 #--------------------------------------------------------------------
+# 
+# In all fuctions below dims is the vector of variable dimensions
+#
 
-function U_xk_c(dims, k, c) 
+"""
+    U_xk_c(dims, k, c)
+
+Compute operator that assigns `k`th variable value `c` 
+(i.e. the `c`th value in its range), and leaves others
+as they are
+
+"""
+function U_xk_c(dims::Array{Int,1}, k::Int, c::Int) 
   @assert c > 0 && c <= dims[k]
   R = I(1)
   for i = 1:(k - 1)
@@ -320,7 +409,24 @@ function U_xk_c(dims, k, c)
   return R
 end
 
+"""
+    U_e(dims, ordinal, ordinals, update)
+
+Compute the operator that assigns to variable with ordinal `ordinal` 
+the value of expression e, where the value, given values of variables,
+is computed using the function `update`. `ordinals` is the vector of 
+ordinals of variables that appear on the RHS of the assignment.
+With that, the operator can be computed more efficiently by
+swapping involved variables so they come first, compute the smaller
+update operator restricted to involved variables and compute 
+Kronecker product of that operator with identity matrices representing
+lack of influence of other variables on the current assignment.
+
+"""
 function Ue(dims::Array{Int,1}, ordinal::Int, ordinals::Array{Int,1}, update::Function)
+  if length(ordinals) == 0
+    return Ue(dims, ordinal, update)
+  end
   swaps = compute_swaps(push!(copy(ordinals), ordinal))
   n = length(swaps)
   dims_swapped = compute_swapped_dims(dims, swaps)
@@ -340,11 +446,22 @@ function Ue(dims::Array{Int,1}, ordinal::Int, ordinals::Array{Int,1}, update::Fu
     R = kron(R,I(dim))
   end
   K = compute_swaps_operator(dims, swaps)
-  return K * R * K 
+  return K * R * transpose(K) 
 end
 
-# old update expression operator which doesnt take into account how many variables
-# are involved in the expression
+"""
+    U_e(dims, ordinal, update)
+
+Compute the operator that assigns to variable with ordinal `ordinal` 
+the value of expression e, where the value, given values of variables,
+is computed using the function `update`. This is the basic implementation
+which doesn't take into account the number of variables appearing on 
+the RHS of the assignment. 
+It loops over all the possible combinations of variable values (and
+uses `unindex` to recover those) and computes the value of the 
+expression (using the `update` function) for those values of variables.
+
+"""
 function Ue(dims::Array{Int,1}, ordinal::Int, update::Function)
   @assert ordinal <= length(dims)
   d = prod(dims)

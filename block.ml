@@ -164,7 +164,8 @@ let julia_operator (l,blk) =
       in  
       if List.length varrefs == 0
       then julia_assignment fl (uc ord (ff (id x) (aexpr_to_julia_string a)))
-      else julia_assignment fl (ue ord ords l)
+      else 
+      julia_assignment fl (ue ord ords l)
   | BRnd(x,r) ->
       julia_assignment fl (ur (id x) (varref2ord x) r)
   | _ -> 
@@ -177,15 +178,10 @@ let julia_operators blocks =
 
 (***********************************************************************)
 
-let id vr = 
-  match vr with
-  | Var(v) -> v
-  | ArrElem(a,i) -> a
-
 (**
  *     julia_helper (l,b)
  *
- * Generate helper functions (tests, assignments) for operators above 
+ * Generate helper function (test, assignment) for operators above 
  * corresponding to block `blk`, labelled `l`
  * *)
 let julia_helper (l,blk) =
