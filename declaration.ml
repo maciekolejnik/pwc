@@ -50,18 +50,56 @@ let meta id =
 (** Auxiliary                                                          *)
 (***********************************************************************)
 
-let range (_,m) =
+let range m =
   match m with 
   | Constant(i) -> [i]
   | Primitive(r) -> r
   | Array(_,r) -> r
 ;;
 
-let size (_,m) =
+let size m =
   match m with
   | Constant(_) -> 0
   | Primitive(_) -> 1
   | Array(l,_)  -> l
+;;
+
+(***********************************************************************)
+(** Error checking                                                     *)
+(***********************************************************************)
+
+let assign_primitive id m =
+  match m with
+  | Constant(_) -> 
+      failwith ("Can't assign to a constant " ^ id)
+  | Primitive(_) -> ()
+  | Array(_,_) ->
+      failwith ("Index required when assigning to array " ^ id)
+;;
+
+let assign_array id m =
+  match m with
+  | Constant(_) -> 
+      failwith ("Can't assign to a constant " ^ id)
+  | Array(_,_) -> ()
+  | Primitive(_) -> 
+      failwith ("Index not allowed when assigning to primitive " ^ id)
+;;
+
+let use_primitive id m =
+  match m with
+  | Constant(_) | Primitive(_) -> ()
+  | Array(_,_) ->
+      failwith ("Can't reference array " ^ id ^ " without index")
+;;
+
+let use_array id m =
+  match m with
+  | Constant(_) ->
+      failwith ("Can't use constant " ^ id ^ " with an index")
+  | Primitive(_) ->
+      failwith ("Can't use primitive " ^ id ^ " with an index")
+  | Array(_,_) -> ()
 ;;
 
 (***********************************************************************)
@@ -147,7 +185,7 @@ let ordinals decls =
   let rec ordinals_aux decls cur =
     match decls with
     | [] -> []
-    | hd::tl -> cur :: ordinals_aux tl (cur + size hd)
+    | hd::tl -> cur :: ordinals_aux tl (cur + size (snd hd))
   in ordinals_aux decls 1
 ;;
 
@@ -162,7 +200,7 @@ let julia_ids2ord decls =
 (***********************************************************************)
 
 let id2rng_entry (id,m) =
-  (in_quotes id, range_in_square_brackets (range (id,m)))
+  (in_quotes id, range_in_square_brackets (range m))
 ;;
 
 let julia_ids2rng decls =
@@ -176,7 +214,7 @@ let ord2rng_entries decls =
     match decls with
     | [] -> []
     | hd::tl -> 
-        let r = range_in_square_brackets (range hd) in
+        let r = range_in_square_brackets (range (snd hd)) in
         begin match (snd hd) with
         | Primitive(_) -> 
             (is,r) :: ord2rng_entries_aux tl (i+1) m
@@ -190,7 +228,7 @@ let ord2rng_entries decls =
 ;;
 
 let ord2rng_entry i (id,m) =
-  (string_of_int i, range_in_square_brackets (range (id,m)))
+  (string_of_int i, range_in_square_brackets (range m))
 ;;
 
 let julia_ords2rng decls =

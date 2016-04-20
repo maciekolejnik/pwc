@@ -123,6 +123,7 @@ aexpr:
 | aexpr TIMES aexpr	        { Expression.Prod($1,$3) }
 | aexpr DIV aexpr		{ Expression.Div($1,$3) }
 | aexpr MOD aexpr		{ Expression.Mod($1,$3) }
+| BITNOT aexpr                  { Expression.BNot($2) }
 | aexpr BITXOR aexpr		{ Expression.BXor($1,$3) }
 | aexpr BITAND aexpr		{ Expression.BAnd($1,$3) }
 | aexpr BITOR aexpr		{ Expression.BOr($1,$3) }
@@ -147,7 +148,7 @@ cond:
 
 varref:
   ID                            { Expression.Var($1) }
-| ID LSQ NUM RSQ                { Expression.ArrElem($1,$3) }
+| ID LSQ aexpr RSQ              { Expression.ArrElem($1,$3) }
 ;
 
 /***********************************************************************/

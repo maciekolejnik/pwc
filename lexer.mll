@@ -49,10 +49,6 @@ rule token = parse
 | "."		     { DOT }
 | ".."		     { DOTDOT }
 | ","		     { COMMA }
-| "&"		     { REF }
-| "!"		     { BANG }
-| "|"		     { BAR }
-| "\\"		     { BACK }
 
 | "int"	             { INT }
 | "bool"	     { BOOL }
@@ -68,13 +64,13 @@ rule token = parse
 | "=="		     { EQ }
 | ">="		     { GEQ }
 | ">"		     { GR }
-| "¬"		     { NOT }
+| "!"		     { NOT }
 | "&&"		     { AND }
 | "||"		     { LOR }
-| "%&"               { BITAND }
-| "%|"               { BITOR }
-| "%+"               { BITXOR }
-| "%-"               { BITNOT }
+| "&"                { BITAND }
+| "|"                { BITOR }
+| "^"                { BITXOR }
+| "~"                { BITNOT }
 
 | ":="		     { ASSIGN }
 | "?="		     { RANDOM }

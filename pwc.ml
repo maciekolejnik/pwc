@@ -33,7 +33,9 @@ let arguments () =
     ("-m", Arg.Clear (flagJulia),   "Julia Output off [default: on] ");
     ("-M", Arg.Set   (flagJulia),   "Julia Output on  ");
     ("-u", Arg.Clear (flagUndef),   "Undefined off [default: off] ");
-    ("-U", Arg.Set   (flagUndef),   "Undefined used \n")]
+    ("-U", Arg.Set   (flagUndef),   "Undefined used \n");
+    ("-o", Arg.Clear (flagOpt),     "Optimisations off [default: off] ");
+    ("-O", Arg.Set   (flagOpt),     "Optimisations used \n")]
   and set_basename s =
     begin
       baseName := s;
@@ -44,7 +46,7 @@ let arguments () =
       julName := !baseName^".jl";
     end
   and usage =
-    "Usage:\n\npwc basename [-v/-V][-b/-B][-t/-T][-x/-X][-m/-M][-u/-U]\n"
+    "Usage:\n\npwc basename [-v/-V][-b/-B][-t/-T][-x/-X][-m/-M][-u/-U][-o/-O]\n"
   in
   Arg.parse arglist (set_basename) usage 
 ;;

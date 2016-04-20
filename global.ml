@@ -8,6 +8,7 @@ and flagText    = ref false
 and flagLaTeX   = ref false
 and flagJulia   = ref true 
 and flagUndef   = ref false
+and flagOpt     = ref true
 ;;
 
 let baseName = ref ""
@@ -121,6 +122,14 @@ let id2rng id =
 let values ord = 
   "values" ^ in_sq_brackets ord
 ;; 
+
+let println s =
+  "println(" ^ in_quotes s ^ ")\n\n"
+;;
+
+let apply_julia_func name args =
+  name ^ "(" ^ (String.concat ", " args) ^ ")"
+;;
 (***********************************************************************)
 
 (* Global List of Parameters *)

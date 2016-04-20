@@ -181,13 +181,17 @@ let julia_flow flow =
   julia_string "# Translation of flow\n";
   julia_separator ();
 
+  julia_string (println "Compute transfer operators and Markov operator...");
+
   julia_transfer_operators flow;
 
   julia_separator ();
 
   julia_markov_operator flow;
+
+  julia_string "\n# Translation of flow finished\n\n";
   
-  julia_string "\n# Translation of flow finished"
+  julia_string (println "Done")
 ;;
 
 

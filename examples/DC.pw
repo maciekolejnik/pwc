@@ -1,0 +1,19 @@
+var
+  b : {0..3}; # who paid the bill
+  s[3] : {0,1}; # each pair secrets
+  p[3] : {0,1}; # publicly announced bit
+  r : {0,1}; # xor of the publicly announced bits
+  i : {0..3}; # loop variable
+
+begin
+for i:=0; i<3; i:=i+1 do
+  s[i] ?= {0,1}
+od;
+for i:=0; i<3; i:=i+1 do
+  if ! (b == i)
+  then p[i] := s[i] ^ s[(i-1)%3]
+  else p[i] := ~ (s[i] ^ s[(i-1)%3])
+  fi
+od;
+r := p[0] ^ p[1] ^ p[2]
+end

@@ -4,10 +4,6 @@ var
   c : 1;
 
 begin
-case x
-  of 0: skip
-  of 1: skip
-  of 2: skip
-esac;
+x := a;
 stop
 end

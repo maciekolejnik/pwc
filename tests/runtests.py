@@ -82,9 +82,12 @@ def test_file(file):
   sys.stdout.flush()
   p = subprocess.Popen(["julia", test_filename], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   out, err = p.communicate()
-  print(out.strip())
   if err.strip() != "":
     print(err)
+  else:
+    print("SUCCESS")
+    #sys.stdout.write("SUCCESS")
+    #sys.stdout.flush()
 
 os.chdir("./t_files")
 files = sys.argv[1:] if len(sys.argv) > 1 else glob.glob("*.t")

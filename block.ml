@@ -119,27 +119,110 @@ let print_blocks bs = output_blocks stdout bs
 let fraction r = "1//" ^ string_of_int (List.length r)
 ;;
 
-let p l b   = "P(dims, test" ^ l ^ ", " ^ string_of_bool b ^ ")"
-(*and ue ord l = "Ue(dims, " ^ ord ^ ", assign" ^ l ^")"*)
-and ue ord ords l = "Ue(dims, " ^ ord ^ ", " ^ ords ^ ", assign" ^ l ^")"
-and uc ord i = "U_xk_c(dims, " ^ ord ^ ", " ^ i ^ ")"
-and ff id i = "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
+let p_opt l ords b = 
+  apply_julia_func "P" ["dims"; ords; "test" ^ l; b]
 ;;
 
-let ucs id ord r = List.map (fun i -> uc ord (ff id (string_of_int i))) r 
-;; 
-
-let ur id ord r = 
-  fraction r ^ "*(" ^ (String.concat " +\n\t" (ucs id ord r)) ^ ")" 
+let p l b = 
+  apply_julia_func "P" ["dims"; "test" ^ l; b]
 ;;
 
-let varref2ord varref =
-  match varref with
-  | Var(v) -> id2ord v
-  | ArrElem(a,i) -> id2ord a ^ "+" ^ string_of_int i
+let ue ord l = 
+  apply_julia_func "Ue" ["dims"; ord; "assign" ^ l]
+;;
+
+let ue_opt ord ords l = 
+  apply_julia_func "Ue" ["dims"; ord; ords; "assign" ^ l]
+;;
+
+let ua ord size l = 
+  apply_julia_func "Ua" ["dims"; ord; "arr_index" ^ l; size; "assign" ^ l]
+;;
+
+let uc ord c = 
+  apply_julia_func "U_xk_c" ["dims"; ord; c]
+;;
+
+let ua_c ord size l c =
+  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; size; c]
 ;;
 
 (***********************************************************************)
+(* CURRENTLY NOT USED *)
+let ff id i = 
+  "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
+;;
+(***********************************************************************)
+
+(***********************************************************************)
+let ucs ord r = 
+  List.map (uc ord) (List.map string_of_int r) 
+;; 
+
+let ua_cs ord size r l = 
+  List.map (ua_c ord size l) (List.map string_of_int r) 
+;;
+
+(***********************************************************************)
+let ur ord r = 
+  fraction r ^ "*(" ^ (String.concat " +\n\t" (ucs ord r)) ^ ")" 
+;;
+
+let ura ord size r l =
+  fraction r ^ "*(" ^ (String.concat " +\n\t" (ua_cs ord size r l)) ^ ")"
+;;
+
+(***********************************************************************)
+
+(** 
+ *     ordinals_julia_list varrefs
+ *
+ * Return ordinals corresponding to variable references `varrefs` as 
+ * string which is a valid julia list. 
+ *)
+let ordinals_julia_list varrefs =
+  let ords = List.flatten (List.map Expression.ordinals varrefs) in
+  apply_julia_func "round" ["Int"; "[" ^ (String.concat ", " ords) ^ "]"]
+;;
+
+let normal_assign x a l =
+  let varrefs = aexpr_vars a in
+  let ords = ordinals_julia_list varrefs
+  and fl = "const F" ^ l in
+  match x with
+  | Var(id) -> 
+      if !flagOpt
+      then julia_assignment fl (ue_opt (id2ord id) ords l)
+      else julia_assignment fl (ue (id2ord id) l) 
+  | ArrElem(id,e) ->
+      let size = string_of_int (Declaration.size (Declaration.meta id)) in
+      if List.length varrefs == 0
+      then julia_assignment fl (ua_c (id2ord id) size l (aexpr_to_julia_string e))
+      else julia_assignment fl (ua (id2ord id) size l) (* TODO optimisation *)
+;;
+
+let random_assign x r l =
+  let fl = "const F" ^ l in
+  match x with
+  | Var(id) -> julia_assignment fl (ur (id2ord id) r)
+  | ArrElem(id,e) -> 
+      let size = string_of_int (Declaration.size (Declaration.meta id))
+      in  julia_assignment fl (ura (id2ord id) size r l)
+;;
+
+let conditional b l =
+  let varrefs = bexpr_vars b in
+  let ords = ordinals_julia_list varrefs
+  and fl = "const F" ^ l in
+  if !flagOpt then begin
+    julia_assignment (fl ^ "t") (p_opt l ords "true");
+    julia_assignment (fl ^ "f") (p_opt l ords "false")
+  end else begin
+    julia_assignment (fl ^ "t") (p l "true");
+    julia_assignment (fl ^ "f") (p l "false")
+  end;
+  julia_assignment fl ("F" ^ l ^  "f")
+;;
 
 (**
  *     julia_operator (l,blk)
@@ -152,22 +235,11 @@ let julia_operator (l,blk) =
   let fl = "const F" ^ l in
   match blk with
   | BTest(b) ->
-      julia_assignment (fl ^ "t") (p l true);
-      julia_assignment (fl ^ "f") (p l false);
-      julia_assignment (fl) ("F" ^ l ^ "f")
+      conditional b l
   | BAsn(x,a) ->
-      let varrefs = variables a in
-      let ord = varref2ord x in
-      let ords = String.concat "," (List.map varref2ord varrefs) in
-      let ords = "round(Int, [" ^ ords ^ "])"
-      (*in  julia_assignment fl (ue (varref2ord x) l)*)
-      in  
-      if List.length varrefs == 0
-      then julia_assignment fl (uc ord (ff (id x) (aexpr_to_julia_string a)))
-      else 
-      julia_assignment fl (ue ord ords l)
+      normal_assign x a l
   | BRnd(x,r) ->
-      julia_assignment fl (ur (id x) (varref2ord x) r)
+      random_assign x r l
   | _ -> 
       julia_assignment fl "I(d)" 
 ;;
@@ -179,21 +251,71 @@ let julia_operators blocks =
 (***********************************************************************)
 
 (**
+ *     julia_test_function l bexpr
+ *
+ * Generate 'test' function corresponding to label `l` 
+ * and expression `bexpr`
+ * *)
+let julia_test_function l bexpr =
+  let name = "test" ^ l
+  and ret = "return " ^ bexpr_to_julia_string bexpr 
+  in  julia_function name ["values"] [ret]
+;;
+
+(**
+ *     julia_assign_function l bexpr
+ *
+ * Generate 'assign' function corresponding to label `l` 
+ * and RHS expression `aexpr`
+ * *)
+let julia_assign_function l aexpr =
+  let name = "assign" ^ l
+  (*and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) *)
+  and ret = "return " ^ aexpr_to_julia_string aexpr
+  in  julia_function name ["values"] [ret]
+;;
+
+(**
+ *     julia_arr_index_function l aexpr
+ *
+ * Generate 'arr_index' function corresponding to label `l` 
+ * and expression `aexpr` describing the position in the array
+ * *)
+let julia_arr_index_function l aexpr =
+  let name = "arr_index" ^ l
+  (* ff would need to be changed to make this work here *)
+  (*and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) *)
+  and ret = "return " ^ aexpr_to_julia_string aexpr
+  in  julia_function name ["values"] [ret]
+;;
+
+let julia_func_if_array l x =
+  match x with
+  | ArrElem(_,e) -> julia_arr_index_function l e
+  | _ -> ()
+;;
+
+(**
  *     julia_helper (l,b)
  *
  * Generate helper function (test, assignment) for operators above 
  * corresponding to block `blk`, labelled `l`
  * *)
 let julia_helper (l,blk) =
+  let l = string_of_int l in
   match blk with
   | BTest(b) -> 
-      let name = "test" ^ string_of_int l
-      and b = "return " ^ bexpr_to_julia_string b 
-      in  julia_function name ["values"] [b]
-  | BAsn(x,a) -> 
-      let name = "assign" ^ string_of_int l
-      and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) 
-      in  julia_function name ["values"] [ret]
+      Expression.check_bexpr b;
+      julia_test_function l b
+  | BAsn(x,e) ->
+      Expression.check_assigned_varref x;
+      Expression.check_aexpr e;
+      julia_assign_function l e;
+      julia_func_if_array l x
+  | BRnd(x,r) -> 
+      Expression.check_assigned_varref x;
+      (*TODO check_range (args) *)
+      julia_func_if_array l x
   | _ -> ()
 ;;
 
@@ -230,6 +352,8 @@ let julia_blocks blocks =
   julia_helpers blocks;
 
   julia_separator ();
+
+  julia_string (println "Compute state updates and filter operators...");
 
   julia_operators blocks;
 ;;

@@ -45,7 +45,7 @@ let rec newlabel () =
 
 let rec label_stmt s =
   match s with
-    Skip ->
+  | Skip ->
       LSkip(newlabel())
   | Stop ->
       LStop(newlabel())
@@ -89,13 +89,13 @@ let rec label_stmt s =
       LChoose(l,wlsl)
   | Goto(t) ->
       LGoto(newlabel(),t)
-and
-  label_case (i,s) = 
-    let l = newlabel() in 
-    ((l,i), label_stmt s)
-and
-  label_wstmt (w,s) =
-    (w, label_stmt s)
+and 
+label_case (i,s) = 
+  let l = newlabel() in 
+  ((l,i), label_stmt s)
+and 
+label_wstmt (w,s) =
+  (w, label_stmt s)
 ;;
 
 (***********************************************************************)
@@ -121,7 +121,6 @@ let rec output_lstmt outch s =
   | LAssign(l,x,a) ->  
       output_string outch "[";
       Expression.output_varref outch x;
-      (*Expression.output_aexpr outch x;*)
       output_string outch " := ";
       Expression.output_aexpr outch a;
       output_string outch "]^";
@@ -130,7 +129,6 @@ let rec output_lstmt outch s =
   | LRandom(l,x,r) ->  
       output_string outch "[";
       Expression.output_varref outch x;
-      (*Expression.output_aexpr outch x;*)
       output_string outch " ?= ";
       Declaration.output_range stdout  r;
       output_string outch "]^";

@@ -4,14 +4,6 @@ open Declaration
 type id = string
 ;;
 
-type index = int
-;;
-
-type varref = 
-   | Var of id
-   | ArrElem of id * index  
-;;
-
 type aexpr =
    | Num of int
    | Varref of varref
@@ -21,9 +13,13 @@ type aexpr =
    | Prod of aexpr * aexpr
    | Div of aexpr * aexpr
    | Mod of aexpr * aexpr
+   | BNot of aexpr
    | BXor of aexpr * aexpr
    | BAnd of aexpr * aexpr
    | BOr of aexpr * aexpr
+and varref = 
+   | Var of id
+   | ArrElem of id * aexpr  
 ;;
 
 (***********************************************************************)
@@ -45,47 +41,144 @@ type bexpr =
 (** Auxiliary                                                          *)
 (***********************************************************************)
 
-let rec variables aexpr = 
+let rec aexpr_vars aexpr = 
   match aexpr with
   | Num(n) -> []
   | Varref(v) -> [v]
-  | Minus(e) -> variables e
-  | Sum(e1,e2) -> variables e1 @ variables e2
-  | Diff(e1,e2) -> variables e1 @ variables e2
-  | Prod(e1,e2) -> variables e1 @ variables e2
-  | Div(e1,e2) -> variables e1 @ variables e2
-  | Mod(e1,e2) -> variables e1 @ variables e2
-  | BXor(e1,e2) -> variables e1 @ variables e2
-  | BAnd(e1,e2) -> variables e1 @ variables e2
-  | BOr(e1,e2) -> variables e1 @ variables e2
+  | Minus(e) -> aexpr_vars e
+  | Sum(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Diff(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Prod(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Div(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Mod(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | BNot(e) -> aexpr_vars e
+  | BXor(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | BAnd(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | BOr(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+;;
+
+let rec bexpr_vars bexpr =
+  match bexpr with
+  | True | False -> []
+  | Not(e) -> bexpr_vars e
+  | And(e1,e2) -> bexpr_vars e1 @ bexpr_vars e2
+  | Or(e1,e2) -> bexpr_vars e1 @ bexpr_vars e2
+  | Lesser(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | LeEqual(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Equal(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | GrEqual(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | Greater(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
 ;;
 
 let id varref = 
   match varref with
-  | Var(v) -> v
-  | ArrElem(a,i) -> a
+  | Var(id) -> id
+  | ArrElem(id,e) -> id
+;;
+
+(** Right now assumes that varref is a valid reference (ie id exists) *)
+let ordinals varref =
+  let m = Declaration.meta (id varref) in
+  let size = Declaration.size m in
+  match varref with
+  | Var(id) -> 
+      if size = 1 then [id2ord id] else []
+  | ArrElem(id,e) -> 
+      let elem_ord i = id2ord id ^ " + " ^ (string_of_int i)
+      in  List.map elem_ord (interval 0 (size - 1))
+;;
+
+(***********************************************************************)
+(** Error checking                                                     *)
+(***********************************************************************)
+
+(**
+ *   check_assigned_varref varref
+ *
+ * Check that the varref 
+ * (1) has been declared
+ * (2) is not a constant (as it is not allowed to assign to a constant) 
+ * (3) is used in the right context, i.e. variable that was declared as 
+ * primitive is used as primitive, and similarly for array
+ *)
+let check_assigned_varref varref =
+  let id = id varref in
+  try 
+    let m = Declaration.meta id in
+    begin match varref with
+    | Var(id) -> 
+        Declaration.assign_primitive id m
+    | ArrElem(id,e) -> 
+        Declaration.assign_array id m
+    end
+  with Not_found ->
+    failwith ("Variable " ^ id ^ " assigned to, but not declared")
+;;
+
+(**
+ *   check_varref varref 
+ *
+ * Check that `varref` exists and is used in the right context - 
+ * similar to above, but allows constants to be used 
+ *)
+let check_varref varref =
+  let id = id varref in
+  try 
+    let m = Declaration.meta id in
+    begin match varref with
+    | Var(id) -> 
+        Declaration.use_primitive id m
+    | ArrElem(id,e) ->
+        Declaration.use_array id m
+    end
+  with Not_found ->
+    failwith ("Variable " ^ id ^ " used, but not declared")
+;;
+
+(**
+ *     check_aexpr aexpr
+ *
+ * Use function above to check all variable references in an 
+ * arithmetic expression
+ *)
+let rec check_aexpr aexpr =
+  match aexpr with
+  | Num(n) -> ()
+  | Varref(v) -> check_varref v
+  | Minus(e) -> check_aexpr e
+  | Sum(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Diff(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Prod(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Div(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Mod(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | BNot(e) -> check_aexpr e
+  | BXor(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | BAnd(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | BOr(e1,e2) -> check_aexpr e1; check_aexpr e2
+;;
+
+(**
+ *     check_bexpr bexpr
+ *
+ * As above, but for binary expressions
+ *)
+let rec check_bexpr bexpr =
+  match bexpr with
+  | True | False -> ()
+  | Not(e) -> check_bexpr e
+  | And(e1,e2) -> check_bexpr e1; check_bexpr e2
+  | Or(e1,e2) -> check_bexpr e1; check_bexpr e2
+  | Lesser(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | LeEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Equal(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | GrEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | Greater(e1,e2) -> check_aexpr e1; check_aexpr e2
 ;;
 
 
 (***********************************************************************)
 (** Generic Output                                                     *)
 (***********************************************************************)
-
-type vrsp =
-  {  var_sp : (id -> string) option;
-     arr_sp : (id * index -> string) option;
-  }
-
-let default_vrsp =
-  {  var_sp = None;
-     arr_sp = None;
-  }
-
-let varref_to_string ?(vrsp=default_vrsp) vr =
-  match vr with
-  | Var(v) -> to_string vrsp.var_sp v v
-  | ArrElem(a,i) -> to_string vrsp.arr_sp (a,i) (a ^ "[" ^ string_of_int i ^ "]")
-;;
 
 (**
  *     asp
@@ -101,13 +194,23 @@ type asp =
      prod_sp  : (aexpr * aexpr -> string) option;
      div_sp   : (aexpr * aexpr -> string) option;
      mod_sp   : (aexpr * aexpr -> string) option;
+     bnot_sp  : (aexpr -> string) option;
      bxor_sp  : (aexpr * aexpr -> string) option;
      band_sp  : (aexpr * aexpr -> string) option;
      bor_sp   : (aexpr * aexpr -> string) option;
   }
+(**
+ *     vrsp
+ *
+ * Special printer data stricture for variable references
+ *)
+and vrsp =
+  {  var_sp : (id -> string) option;
+     arr_sp : (id * aexpr -> string) option;
+  }
 ;;
 
-let default_asp =
+let rec default_asp =
   {  num_sp   = None;  
      vr_sp    = default_vrsp;
      minus_sp = None;  
@@ -116,9 +219,14 @@ let default_asp =
      prod_sp  = None; 
      div_sp   = None;  
      mod_sp   = None;  
+     bnot_sp  = None;  
      bxor_sp  = None;  
      band_sp  = None;  
      bor_sp   = None;  
+  }
+and default_vrsp =
+  {  var_sp = None;
+     arr_sp = None;
   }
 ;;
 
@@ -152,12 +260,30 @@ let rec aexpr_to_string ?(asp=default_asp) aexpr =
       infix_operator asp.div_sp "/" e1 e2
   | Mod(e1,e2) ->
       infix_operator asp.mod_sp "%" e1 e2
+  | BNot(e) -> 
+      let es = aexpr_to_string ~asp:asp e
+      in  to_string asp.bnot_sp e ("~ " ^ es)
   | BXor(e1,e2) -> 
       infix_operator asp.bxor_sp "$" e1 e2
   | BAnd(e1,e2) ->
       infix_operator asp.band_sp "&" e1 e2
   | BOr(e1,e2) -> 
       infix_operator asp.bor_sp "|" e1 e2
+and
+(**
+ *     varref_to_string ?asp aexpr
+ *
+ * Return the string representation of `vr`, using 
+ * the aexpr special printer `asp` and varref special printer `vrsp`,
+ * if present
+ *)
+varref_to_string ?(vrsp=default_vrsp) ?(asp=default_asp) vr =
+  match vr with
+  | Var(v) -> 
+      to_string vrsp.var_sp v v
+  | ArrElem(a,e) -> 
+      let s = a ^ "[" ^ aexpr_to_string ~asp:asp e ^ "]" (* TODO: change!! *)
+      in  to_string vrsp.arr_sp (a,e) s
 ;;
 
 (***********************************************************************)
@@ -281,15 +407,12 @@ let rec julia_asp =
     div_sp = (Some div);
   }
 and var v = 
-  try
-    match meta v with
-    | Constant(i) -> string_of_int i
-    | Primitive(_) -> id2rng v ^ in_sq_brackets (values (id2ord v)) 
-    | Array(_,_) -> failwith ("Variable " ^ v ^ " has been declared as array")
-  with Not_found ->
-    failwith ("Variable " ^ v ^ " has not been declared")
-and arr (a,i) = 
-  let ordinal = id2ord a ^ " + " ^ (string_of_int i)
+  match meta v with
+  | Constant(i) -> string_of_int i
+  | Primitive(_) -> id2rng v ^ in_sq_brackets (values (id2ord v)) 
+  | _ -> failwith "Internal error: unexpected variable"
+and arr (a,e) = 
+  let ordinal = id2ord a ^ " + " ^ (aexpr_to_string ~asp:julia_asp e) (* TODO *)
   in id2rng a ^ in_sq_brackets (values ordinal) 
 and div (e1,e2) = 
   let e1 = aexpr_to_string ~asp:julia_asp e1
