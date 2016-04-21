@@ -120,7 +120,7 @@ let fraction r = "1//" ^ string_of_int (List.length r)
 ;;
 
 let p_opt l ords b = 
-  apply_julia_func "P" ["dims"; ords; "test" ^ l; b]
+  apply_julia_func "P" ["dims"; "test" ^ l; ords; b]
 ;;
 
 let p l b = 
@@ -132,11 +132,16 @@ let ue ord l =
 ;;
 
 let ue_opt ord ords l = 
-  apply_julia_func "Ue" ["dims"; ord; ords; "assign" ^ l]
+  apply_julia_func "Ue" ["dims"; ord; "assign" ^ l; ords]
 ;;
 
 let ua ord size l = 
   apply_julia_func "Ua" ["dims"; ord; "arr_index" ^ l; size; "assign" ^ l]
+;;
+
+let ua_opt ord idx_ords size asn_ords l = 
+  apply_julia_func "Ua" 
+      ["dims"; ord; "arr_index" ^ l; idx_ords; size; "assign" ^ l; asn_ords]
 ;;
 
 let uc ord c = 
@@ -195,10 +200,16 @@ let normal_assign x a l =
       then julia_assignment fl (ue_opt (id2ord id) ords l)
       else julia_assignment fl (ue (id2ord id) l) 
   | ArrElem(id,e) ->
-      let size = string_of_int (Declaration.size (Declaration.meta id)) in
+      let size = string_of_int (Declaration.size (Declaration.meta id)) 
+      and idx_varrefs = aexpr_vars e in
+      let idx_ords = ordinals_julia_list idx_varrefs in
+      if !flagOpt
+      then julia_assignment fl (ua_opt (id2ord id) idx_ords size ords l)
+      else julia_assignment fl (ua (id2ord id) size l)
+      (*
       if List.length varrefs == 0
       then julia_assignment fl (ua_c (id2ord id) size l (aexpr_to_julia_string e))
-      else julia_assignment fl (ua (id2ord id) size l) (* TODO optimisation *)
+      else julia_assignment fl (ua (id2ord id) size l) (* TODO optimisation *)*)
 ;;
 
 let random_assign x r l =

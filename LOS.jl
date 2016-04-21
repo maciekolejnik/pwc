@@ -423,53 +423,6 @@ end
 #--------------------------------------------------------------------
 
 """
-    Ue(dims, ordinal, ordinals, update)
-
-    Optimised variable update operator
-
-Compute the operator that assigns to variable with ordinal `ordinal` 
-the value of expression e, where the value, given values of variables,
-is computed using the function `update`. `ordinals` is the vector of 
-ordinals of variables that appear on the RHS of the assignment.
-With that, the operator can be computed more efficiently by
-swapping involved variables so they come first, compute the smaller
-update operator restricted to involved variables and compute 
-Kronecker product of that operator with identity matrices representing
-lack of influence of other variables on the current assignment.
-
-Special case is when `ordinals` is empty - it means the expression
-on the RHS of the assignment does not contain any variables, i.e. has
-a numeric value. Hence constant update operator from above can be used.
-
-"""
-function Ue(dims::Array{Int,1}, ordinal::Int, ordinals::Array{Int,1}, update::Function)
-  if length(ordinals) == 0
-    values = ones(Int, 1, length(dims))
-    return U_xk_c(dims, ordinal, update(values))
-  end
-  swaps = compute_swaps(push!(copy(ordinals), ordinal))
-  n = length(swaps)
-  dims_swapped = compute_swapped_dims(dims, swaps)
-  dims_restricted = dims_swapped[1:n]
-  newordinal = findfirst(swaps, ordinal)
-  d = prod(dims_restricted)
-  R = spzeros(Int,d,d)
-  for i = 1:d
-    values_restricted = unindex(dims_restricted, i)
-    values = extend(values_restricted, swaps, length(dims))
-    values_restricted[newordinal] = findfirst(ord2rng[ordinal], update(values))
-    if values_restricted[newordinal] > 0
-      R[i, index(dims_restricted, values_restricted)] = 1
-    end
-  end
-  for dim in dims_swapped[n+1:end]
-    R = kron(R,I(dim))
-  end
-  K = compute_swaps_operator(dims, swaps)
-  return K * R * transpose(K) 
-end
-
-"""
     Ue(dims, ordinal, update)
 
     Variable update operator
@@ -500,12 +453,62 @@ function Ue(dims::Array{Int,1}, ordinal::Int, update::Function)
   return R
 end
 
+"""
+    Ue(dims, ordinal, ordinals, update)
+
+    Optimised variable update operator
+
+Compute the operator that assigns to variable with ordinal `ordinal` 
+the value of expression e, where the value, given values of variables,
+is computed using the function `update`. `ordinals` is the vector of 
+ordinals of variables that appear on the RHS of the assignment.
+With that, the operator can be computed more efficiently by
+swapping involved variables so they come first, compute the smaller
+update operator restricted to involved variables and compute 
+Kronecker product of that operator with identity matrices representing
+lack of influence of other variables on the current assignment.
+
+Special case is when `ordinals` is empty - it means the expression
+on the RHS of the assignment does not contain any variables, i.e. has
+a numeric value. Hence constant update operator from above can be used.
+
+"""
+function Ue(dims::Array{Int,1}, ordinal::Int, 
+            update::Function, ordinals::Array{Int,1})
+  if length(ordinals) == 0
+    values = ones(Int, 1, length(dims))
+    return U_xk_c(dims, ordinal, update(values))
+  end
+  swaps = compute_swaps(push!(copy(ordinals), ordinal))
+  n = length(swaps)
+  dims_swapped = compute_swapped_dims(dims, swaps)
+  dims_restricted = dims_swapped[1:n]
+  newordinal = findfirst(swaps, ordinal)
+  d = prod(dims_restricted)
+  R = spzeros(Int,d,d)
+  for i = 1:d
+    values_restricted = unindex(dims_restricted, i)
+    values = extend(values_restricted, swaps, length(dims))
+    values_restricted[newordinal] = findfirst(ord2rng[ordinal], update(values))
+    if values_restricted[newordinal] > 0
+      R[i, index(dims_restricted, values_restricted)] = 1
+    end
+  end
+  for dim in dims_swapped[n+1:end]
+    R = kron(R,I(dim))
+  end
+  K = compute_swaps_operator(dims, swaps)
+  return K * R * transpose(K) 
+end
+
 #--------------------------------------------------------------------
 # Array update operators 
 #--------------------------------------------------------------------
 
 """
     Ua_c(dims, ordinal, compute_index, size, c)
+
+    Constant array update operator
 
 Compute operator that assigns value `c` to the kth element
 of the array (of size `size`) that starts at ordinal `ordinal`, 
@@ -528,6 +531,63 @@ function Ua_c(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
         R[i,index(dims, values)] = 1
       end
     end
+  end
+  return R
+end
+
+"""
+    Ua_c(dims, ordinal, compute_index, index_ordinals, size, c)
+
+    Optimised constant array update operator
+
+As above, but uses extra information in `index_ordinals` which tells
+which variables appear in the index expression.
+"""
+function Ua_c(dims::Array{Int,1}, ordinal::Int, compute_index::Function, 
+              size::Int, c::Int)
+  @assert ordinal <= length(dims)
+  d = prod(dims)
+  R = spzeros(Int,d,d)
+  for i = 0:size-1
+    R += P(dims, compute_index, index_ordinals, i) * 
+         U_xk_c(dims, ordinal + i, c) 
+  end
+  return R
+end
+
+"""
+    Ua(dims, ordinal, compute_index, index_ordinals, 
+       size, update, update_ordinals)
+
+    Optimised array update operator
+
+Compute the operator that assigns to nth element of an array of size
+`size`, whose first element has ordinal `ordinal`, value given by 
+function `update`, where n is given by function `compute_index` 
+(which, the same as `update`, takes as argument values of all variables,
+so n differs depending on the values of variables)
+Uses the extra information in `index_ordinals` - which variables appear
+in the index expression, and `update_ordinals` - which variables appear
+in the RHS expression.
+"""
+function Ua(dims::Array{Int,1}, ordinal::Int, compute_index::Function, 
+            index_ordinals::Array{Int,1}, size::Int, update::Function,
+            update_ordinals::Array{Int,1})
+  @assert ordinal <= length(dims)
+  if length(index_ordinals) == 0
+    #values = ones(Int, 1, length(dims))
+    #index = compute_index(values)
+    index = compute_index([])
+    # how to handle array index out of range?
+    if valid_index(size, index + 1)
+      return Ue(dims, ordinal + index, update, update_ordinals)
+    end
+  end
+  d = prod(dims)
+  R = spzeros(Int,d,d)
+  for i = 0:size-1
+    R += P(dims, compute_index, index_ordinals, i) * 
+         Ue(dims, ordinal + i, update, update_ordinals) 
   end
   return R
 end
@@ -560,9 +620,18 @@ function Ua(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
     end
   end
   return R
-  
 end
 
+function Ua_alt(dims::Array{Int,1}, ordinal::Int, compute_index::Function, 
+                size::Int, update::Function)
+  @assert ordinal <= length(dims)
+  d = prod(dims)
+  R = spzeros(Int,d,d)
+  for i = 0:size-1
+    R += P(dims, compute_index, i) * Ue(dims, ordinal + i, update) 
+  end
+  return R
+end
 """
 
 NOT USED RIGHT NOW
@@ -616,7 +685,7 @@ Special case here is when no variables appear in expression 'e' - then the
 operator is simply identity when 'e' is true and zero matrix when 'e' is false
    
 """
-function P(dims::Array{Int,1}, ordinals::Array{Int,1}, test::Function, c::Bool)
+function P(dims::Array{Int,1}, test::Function, ordinals::Array{Int,1}, c::Bool)
   if length(ordinals) == 0
     values = squeeze(ones(Int,1,length(dims)),1)
     d = prod(dims)
