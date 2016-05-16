@@ -151,25 +151,21 @@ let triple_to_operator (i,w,f) =
 ;;
 
 let julia_markov_operator flow =
-  julia_string "const T = ";
-  julia_string (String.concat " + " (List.map triple_to_operator flow));
-  julia_newline ()
+  let rhs = String.concat " + " (List.map triple_to_operator flow)
+  in  julia_assignment "const T" rhs
 ;;
 
-let julia_transfer_operator (i,w,f) = 
-  julia_string "const T";
-  julia_int i;
-  julia_int f;
-  julia_string " = abs(";
-  Statement.julia_weight w;
-  julia_string ") * kron(F";
-  julia_int i;
-  if fst w < 0 then julia_string "t";
-  julia_string ", E(b,";
-  julia_int i;
-  julia_string ",";
-  julia_int f;
-  julia_string "))\n"
+let julia_transfer_operator (i,w,f) =
+  let i = string_of_int i
+  and f = string_of_int f in
+  let lhs = "const T" ^ i ^ f
+  and wt  = Statement.weight_to_string w "//" in
+  let abs = apply_julia_func "abs" [wt]
+  and op  = "F" ^ i ^ (if fst w < 0 then "t" else "")
+  and e   = apply_julia_func "E" ["b";i;f] in
+  let kron = apply_julia_func "kron" [op; e] in
+  let rhs = abs ^ " * " ^ kron
+  in  julia_assignment lhs rhs
 ;;
 
 let julia_transfer_operators flow = 

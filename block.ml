@@ -218,10 +218,6 @@ let normal_assign x a l =
       if !flagOpt
       then julia_assignment fl (ua_opt (id2ord id) idx_ords size ords l)
       else julia_assignment fl (ua (id2ord id) size l)
-      (*
-      if List.length varrefs == 0
-      then julia_assignment fl (ua_c (id2ord id) size l (aexpr_to_julia_string e))
-      else julia_assignment fl (ua (id2ord id) size l) (* TODO optimisation *)*)
 ;;
 
 let random_assign x r l =
@@ -297,7 +293,6 @@ let julia_test_function l bexpr =
  * *)
 let julia_assign_function l aexpr =
   let name = "assign" ^ l
-  (*and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) *)
   and ret = "return " ^ aexpr_to_julia_string aexpr
   in  julia_function name ["values"] [ret]
 ;;
@@ -310,8 +305,6 @@ let julia_assign_function l aexpr =
  * *)
 let julia_arr_index_function l aexpr =
   let name = "arr_index" ^ l
-  (* ff would need to be changed to make this work here *)
-  (*and ret = "return " ^ ff (id x) (aexpr_to_julia_string a) *)
   and ret = "return " ^ aexpr_to_julia_string aexpr
   in  julia_function name ["values"] [ret]
 ;;
@@ -359,13 +352,13 @@ let julia_blocks_number blocks =
 ;;
 
 (**
- *     julia_blocks blocks
- *
- * @param `blocks` list of labeled blocks (ie pairs (label, block))
- *
- * Main julia output function in this file, writes the number of 
- * blocks and state update + filter operators with corresponding
- * test and assignment functions to the julia file. 
+      julia_blocks blocks
+ 
+  @param `blocks` list of labelled blocks (ie pairs (label, block))
+ 
+  Main julia output function in this file, writes the number of 
+  blocks and state update + filter operators along with corresponding
+  test and assignment functions to the julia file. 
  *)
 let julia_blocks blocks =
   julia_separator ();
