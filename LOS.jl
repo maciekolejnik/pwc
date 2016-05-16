@@ -544,7 +544,7 @@ As above, but uses extra information in `index_ordinals` which tells
 which variables appear in the index expression.
 """
 function Ua_c(dims::Array{Int,1}, ordinal::Int, compute_index::Function, 
-              size::Int, c::Int)
+              index_ordinals::Array{Int,1}, size::Int, c::Int)
   @assert ordinal <= length(dims)
   d = prod(dims)
   R = spzeros(Int,d,d)
@@ -685,7 +685,7 @@ Special case here is when no variables appear in expression 'e' - then the
 operator is simply identity when 'e' is true and zero matrix when 'e' is false
    
 """
-function P(dims::Array{Int,1}, test::Function, ordinals::Array{Int,1}, c::Bool)
+function P(dims::Array{Int,1}, test::Function, ordinals::Array{Int,1}, c::Int)
   if length(ordinals) == 0
     values = squeeze(ones(Int,1,length(dims)),1)
     d = prod(dims)
@@ -725,7 +725,7 @@ evaluates to value `c`, where `c` is `true` or `false`. Function `test`
 is used to evaluate the expression e given values of all variables.
    
 """
-function P(dims::Array{Int,1}, test::Function, c::Bool)
+function P(dims::Array{Int,1}, test::Function, c::Int)
   d = prod(dims)
   R = spzeros(Int,d,d)
   for i = 1:d

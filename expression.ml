@@ -181,9 +181,9 @@ let rec check_bexpr bexpr =
 (***********************************************************************)
 
 (**
- *     asp
- *
- * Special printer data structure for aexpr 
+      asp
+ 
+  Special printer data structure for aexpr 
  *)
 type asp =
   {  num_sp   : (int -> string) option;
@@ -200,9 +200,9 @@ type asp =
      bor_sp   : (aexpr * aexpr -> string) option;
   }
 (**
- *     vrsp
- *
- * Special printer data stricture for variable references
+      vrsp
+ 
+  Special printer data stricture for variable references
  *)
 and vrsp =
   {  var_sp : (id -> string) option;

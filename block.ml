@@ -152,6 +152,10 @@ let ua_c ord size l c =
   apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; size; c]
 ;;
 
+let ua_c_opt ord ords size l c =
+  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; ords; size; c]
+;;
+
 (***********************************************************************)
 (* CURRENTLY NOT USED *)
 let ff id i = 
@@ -168,6 +172,10 @@ let ua_cs ord size r l =
   List.map (ua_c ord size l) (List.map string_of_int r) 
 ;;
 
+let ua_cs_opt ord ords size r l = 
+  List.map (ua_c_opt ord ords size l) (List.map string_of_int r) 
+;;
+
 (***********************************************************************)
 let ur ord r = 
   fraction r ^ "*(" ^ (String.concat " +\n\t" (ucs ord r)) ^ ")" 
@@ -175,6 +183,10 @@ let ur ord r =
 
 let ura ord size r l =
   fraction r ^ "*(" ^ (String.concat " +\n\t" (ua_cs ord size r l)) ^ ")"
+;;
+
+let ura_opt ord ords size r l =
+  fraction r ^ "*(" ^ (String.concat " +\n\t" (ua_cs_opt ord ords size r l)) ^ ")"
 ;;
 
 (***********************************************************************)
@@ -218,7 +230,11 @@ let random_assign x r l =
   | Var(id) -> julia_assignment fl (ur (id2ord id) r)
   | ArrElem(id,e) -> 
       let size = string_of_int (Declaration.size (Declaration.meta id))
-      in  julia_assignment fl (ura (id2ord id) size r l)
+      and varrefs = aexpr_vars e in
+      let ords = ordinals_julia_list varrefs in
+      if !flagOpt
+      then julia_assignment fl (ura_opt (id2ord id) ords size r l)
+      else julia_assignment fl (ura (id2ord id) size r l)
 ;;
 
 let conditional b l =
@@ -226,11 +242,11 @@ let conditional b l =
   let ords = ordinals_julia_list varrefs
   and fl = "const F" ^ l in
   if !flagOpt then begin
-    julia_assignment (fl ^ "t") (p_opt l ords "true");
-    julia_assignment (fl ^ "f") (p_opt l ords "false")
+    julia_assignment (fl ^ "t") (p_opt l ords "1");
+    julia_assignment (fl ^ "f") (p_opt l ords "0")
   end else begin
-    julia_assignment (fl ^ "t") (p l "true");
-    julia_assignment (fl ^ "f") (p l "false")
+    julia_assignment (fl ^ "t") (p l "1");
+    julia_assignment (fl ^ "f") (p l "0")
   end;
   julia_assignment fl ("F" ^ l ^  "f")
 ;;
@@ -269,8 +285,8 @@ let julia_operators blocks =
  * *)
 let julia_test_function l bexpr =
   let name = "test" ^ l
-  and ret = "return " ^ bexpr_to_julia_string bexpr 
-  in  julia_function name ["values"] [ret]
+  and ret_val = apply_julia_func "convert" ["Int"; bexpr_to_julia_string bexpr]
+  in  julia_function name ["values"] ["return " ^ ret_val]
 ;;
 
 (**
