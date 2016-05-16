@@ -12,57 +12,56 @@ def p_prog(p):
     p[0] = [p[1]]
 
 def p_case(p):
-  'case : BEGIN steps END'
+  'case : BEGIN asserts END'
   p[0] = p[2]
 
-def p_steps(p):
-  'steps : init asserts'
-  p[0] = { 'init' : p[1], 'asserts' : p[2] }
+def p_asserts(p):
+  'asserts : init steps'
+  p[0] = { 'init' : p[1], 'steps' : p[2] }
 
 def p_init(p):
-  'init : INIT COLON states'
+  'init : INIT COLON state_dist'
   p[0] = p[3]
 
-def p_asserts(p):
-  '''asserts : asserts assert
-             | assert'''
+def p_steps(p):
+  '''steps : steps step
+           | step'''
   p[0] = p[1]
   if len(p) == 3:
     p[0].update(p[2])
 
-def p_assert(p):
-  'assert : STEP NUMBER COLON states SEMICOL block'
-  p[0] = { p[2] : (p[4], list(set(p[6]))) }
-
-def p_states(p):
-  '''states : states SEMICOL state
-            | state'''
-  if len(p) == 4:
-    p[0] = p[1]
-    p[0].append(p[3])
-  else:
-    p[0] = [p[1]]
+def p_step(p):
+  'step : STEP NUMBER COLON state_dist'
+  p[0] = { p[2] : p[4] }
 
 def p_state(p):
-  '''state : rational COLON values
-           | values'''
-  if len(p) == 4:
-    p[0] = (p[1], p[3])
-  else:
-    p[0] = ((1,1), p[1])
+  'state : values SEMICOL block'
+  p[0] = (p[1], p[3])
 
-def p_block(p):
-  'block : BLOCK EQUALS range'
-  p[0]  = p[3]
-
-def p_range(p):
-  '''range : range COMMA NUMBER
-           | NUMBER'''
-  if len(p) == 4:
+def p_state_dist(p):
+  '''state_dist : pstates 
+                | state'''
+  if type(p[1]) is list:
     p[0] = p[1]
-    p[0].append(p[3])
+  else:
+    p[0] = [((1,1), p[1])] 
+
+def p_pstate(p):
+  'pstate : rational COLON state'
+  p[0] = (p[1], p[3])
+
+def p_pstates(p):
+  '''pstates : pstates pstate
+             | pstate'''
+  if len(p) == 3:
+    p[0] = p[1]
+    p[0].append(p[2])
   else:
     p[0] = [p[1]]
+
+def p_block(p):
+  'block : BLOCK EQUALS rhs'
+  p[0]  = p[3]
 
 def p_values(p):
   '''values : values COMMA value

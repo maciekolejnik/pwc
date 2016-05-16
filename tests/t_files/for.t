@@ -1,5 +1,5 @@
 begin
-init: x=0, y=0
+init: x=0, y=0; block=1
 step 1: x=0, y=0; block=2
 step 2: x=0, y=0; block=3
 step 3: x=0, y=0; block=5

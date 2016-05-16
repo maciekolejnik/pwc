@@ -13,54 +13,56 @@ def kron(a, b):
 # `values_distribution` is a list of tuples (r,v) where `r` is a rational
 # number (represented as a tuple of integers) representing the probability
 # of variable `var` having value `v`
-def as_vector(var, values_distribution):
+def as_variables_vector(var, values_distribution):
   rng = "id2rng[\"" + var + "\"]"
   vectors = []
   for (p, q), value in values_distribution:
     rational = str(p) + "//" + str(q)
     findfirst = "findfirst(" + rng + ", " + str(value) + ")"
     vectors.append(rational + " * e_i(length(" + rng + "), " + findfirst + ")")
-  return " + ".join(vectors) 
+  return " +\n\t ".join(vectors) 
 
-def compute_variables_vector(weighted_variables_mappings):
+def as_block_vector(block_distribution):
   vectors = []
-  for (p, q), variables_mapping in weighted_variables_mappings:
+  for (p,q), block in block_distribution:
     rational = str(p) + "//" + str(q)
-    result = "eye(1)"
-    for var_name, values_distribution in variables_mapping:
-      result = kron(result, as_vector(var_name, values_distribution))   
-    vectors.append(rational + " * " + result)
-  return " +\n\t".join(vectors)
+    vectors.append(rational + " * e_i(b, " + str(block) + ")")
+  return " + ".join(vectors)
 
-def compute_state_vector(variables_vector, blocks):
+def compute_weighted_state_vector(weighted_state):
   vectors = []
-  multiplier = "1//" + str(len(blocks))
-  for block in blocks:
-    vectors.append("e_i(b," + str(block) + ")")
-  block_vector = multiplier + " * (" + " + ".join(vectors) + ")"
-  return kron(variables_vector, block_vector)
+  for (p,q), state in weighted_state:
+    rational = str(p) + "//" + str(q)
+    state_vector = compute_state_vector(state[0], state[1])
+    vectors.append(rational + " * " + state_vector)
+  return " + ".join(vectors)
 
-def generate_test_for_init(weighted_variables_mappings):
-  result = kron(compute_variables_vector(weighted_variables_mappings), "e_i(b,1)")
+def compute_state_vector(variables_mapping, block_distribution):
+  result = "eye(1)"
+  for var_name, values_distribution in variables_mapping:
+    result = kron(result, as_variables_vector(var_name, values_distribution))
+  result = kron(result, as_block_vector(block_distribution))
+  return result
+
+def generate_test_for_init(weighted_state):
+  result = compute_weighted_state_vector(weighted_state)
   return "init = " + result + "\n\n"
 
-def generate_test_for_assert(steps, weighted_variables_mappings, blocks):
-  result = "@test init * T^" + str(steps) + " == "
-  variables_vector = compute_variables_vector(weighted_variables_mappings)
-  result += compute_state_vector(variables_vector, blocks)
+def generate_test_for_step(step, weighted_state):
+  result = "@test init * T^" + str(step) + " == "
+  result += compute_weighted_state_vector(weighted_state)
   result += "\n"
   return result
 
-def generate_test_for_asserts(asserts):
+def generate_test_for_steps(steps):
   result = ""
-  for step in asserts:
-    # asserts[step] is a tuple (variables_mapping, block)
-    result += generate_test_for_assert(step, asserts[step][0], asserts[step][1])
+  for step in steps:
+    result += generate_test_for_step(step, steps[step])
   return result
 
 def generate_test_for_case(case):
   result = generate_test_for_init(case['init'])
-  result += generate_test_for_asserts(case['asserts'])
+  result += generate_test_for_steps(case['steps'])
   return result
 
 def generate(prog, basename):
