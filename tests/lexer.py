@@ -19,7 +19,9 @@ tokens = list(keywords.values()) + [
     'EQUALS',
     'NUMBER',
     'DIV',
-    'MINUS'
+    'MINUS',
+    'LSQ',
+    'RSQ'
 ]
 
 t_MINUS   = r'-'
@@ -28,6 +30,8 @@ t_COLON   = r':'
 t_SEMICOL = r';'
 t_COMMA   = r','
 t_EQUALS  = r'='
+t_LSQ     = r'\['
+t_RSQ     = r'\]'
 
 def t_NUMBER(t):
   r'\d+'

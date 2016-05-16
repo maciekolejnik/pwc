@@ -20,7 +20,7 @@ def p_steps(p):
   p[0] = { 'init' : p[1], 'asserts' : p[2] }
 
 def p_init(p):
-  'init : INIT COLON values'
+  'init : INIT COLON states'
   p[0] = p[3]
 
 def p_asserts(p):
@@ -31,8 +31,25 @@ def p_asserts(p):
     p[0].update(p[2])
 
 def p_assert(p):
-  'assert : STEP NUMBER COLON values SEMICOL block'
+  'assert : STEP NUMBER COLON states SEMICOL block'
   p[0] = { p[2] : (p[4], list(set(p[6]))) }
+
+def p_states(p):
+  '''states : states SEMICOL state
+            | state'''
+  if len(p) == 4:
+    p[0] = p[1]
+    p[0].append(p[3])
+  else:
+    p[0] = [p[1]]
+
+def p_state(p):
+  '''state : rational COLON values
+           | values'''
+  if len(p) == 4:
+    p[0] = (p[1], p[3])
+  else:
+    p[0] = ((1,1), p[1])
 
 def p_block(p):
   'block : BLOCK EQUALS range'
@@ -57,8 +74,12 @@ def p_values(p):
     p[0] = [p[1]]
 
 def p_value(p):
-  'value : ID EQUALS rhs'
-  p[0] = (p[1], p[3])
+  '''value : ID EQUALS rhs
+           | ID LSQ NUMBER RSQ EQUALS rhs'''
+  if len(p) == 4:
+    p[0] = (p[1], p[3])
+  else:
+    p[0] = (p[1], p[6]) # this is slightly hacky right now - improve later!
 
 def p_rhs_num(p):
   'rhs : integer' 
@@ -78,8 +99,12 @@ def p_alts(p):
     p[0] = [p[1]]
 
 def p_alt(p):
-  'alt : NUMBER DIV NUMBER COLON integer'
-  p[0] = ((p[1], p[3]),  p[5])
+  'alt : rational COLON integer'
+  p[0] = (p[1],  p[3])
+
+def p_rational(p):
+  'rational : NUMBER DIV NUMBER'
+  p[0] = (p[1], p[3])
 
 def p_integer(p):
   '''integer : NUMBER

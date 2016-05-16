@@ -22,11 +22,15 @@ def as_vector(var, values_distribution):
     vectors.append(rational + " * e_i(length(" + rng + "), " + findfirst + ")")
   return " + ".join(vectors) 
 
-def compute_variables_vector(variables_mapping):
-  result = "eye(1)"
-  for var_name, values_distribution in variables_mapping:
-    result = kron(result, as_vector(var_name, values_distribution))   
-  return result
+def compute_variables_vector(weighted_variables_mappings):
+  vectors = []
+  for (p, q), variables_mapping in weighted_variables_mappings:
+    rational = str(p) + "//" + str(q)
+    result = "eye(1)"
+    for var_name, values_distribution in variables_mapping:
+      result = kron(result, as_vector(var_name, values_distribution))   
+    vectors.append(rational + " * " + result)
+  return " +\n\t".join(vectors)
 
 def compute_state_vector(variables_vector, blocks):
   vectors = []
@@ -36,13 +40,13 @@ def compute_state_vector(variables_vector, blocks):
   block_vector = multiplier + " * (" + " + ".join(vectors) + ")"
   return kron(variables_vector, block_vector)
 
-def generate_test_for_init(variables_mapping):
-  result = kron(compute_variables_vector(variables_mapping), "e_i(b,1)")
+def generate_test_for_init(weighted_variables_mappings):
+  result = kron(compute_variables_vector(weighted_variables_mappings), "e_i(b,1)")
   return "init = " + result + "\n\n"
 
-def generate_test_for_assert(steps, variables_mapping, blocks):
+def generate_test_for_assert(steps, weighted_variables_mappings, blocks):
   result = "@test init * T^" + str(steps) + " == "
-  variables_vector = compute_variables_vector(variables_mapping)
+  variables_vector = compute_variables_vector(weighted_variables_mappings)
   result += compute_state_vector(variables_vector, blocks)
   result += "\n"
   return result
