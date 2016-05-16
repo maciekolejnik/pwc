@@ -1,0 +1,7 @@
+var 
+  c : {0,1};
+
+begin
+# Toss the coin
+c ?= {0,1}
+end

@@ -1,0 +1,9 @@
+var 
+  i : {0..10};
+  bin[10] : {0,1};
+begin
+for i:=0; i<10; i:=i+1 do
+  bin[i]?={0,1};
+od;
+stop
+end

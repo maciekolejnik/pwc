@@ -1,0 +1,24 @@
+# This program models the following game
+
+# Alice is given `a` nickels and Bob is given `b` nickels 
+# initially. At each turn, a dice is thrown - if it comes up heads, 
+# Alice gives Bob one nickel, if it comes up tails, Bob gives a nickel 
+# to Alice. It goes on until one of them has lost all their money.
+# What are the chances of Alice winning the game?
+
+var
+  a : {0..6}; # Alice's money
+  b : {0..6}; # Bob's money
+  c : 3; # Sum Alice gets initially
+  x : {-1,1};
+
+begin
+a := c;
+b := 6 - c;
+while a > 0 && b > 0 do
+  x ?= {-1,1};
+  a := a + x;
+  b := b - x
+od;
+stop
+end

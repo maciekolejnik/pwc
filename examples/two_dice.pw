@@ -1,0 +1,26 @@
+# This program models the following probabilistic puzzle:
+#
+# Throw two dice. You win a nickel if 2 or 5 shows on either dice, 
+# otherwise you lose a nickel. Do you want to play the game?
+#
+
+var 
+  d1 : {1..6}; # first dice
+  d2 : {1..6}; # second dice
+  r : {0,1}; # result: 0 - you win, 1 - I win
+
+begin
+# Throw first dice
+d1 ?= {1..6};
+# Throw second dice
+d2 ?= {1..6};
+# Set the result 
+if d1==2 || d1==5 || d2==2 || d2==5
+then r := 0
+else r := 1
+fi;
+# Optional 
+d1 := 1;
+d2 := 1;
+stop
+end

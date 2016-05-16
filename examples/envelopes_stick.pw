@@ -1,0 +1,11 @@
+var 
+  e : {0,1};
+  c : {0,1};
+
+begin
+# Pick the more valuable envelope
+e ?= {0,1};
+# Choose one of the envelopes
+c ?= {0,1};
+stop
+end
