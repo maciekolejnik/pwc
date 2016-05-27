@@ -3,26 +3,23 @@
 (***********************************************************************)
 
 let flagVerbose = ref false
-and flagBinary  = ref false
 and flagText    = ref false
-and flagLaTeX   = ref false
 and flagJulia   = ref true 
-and flagUndef   = ref false
 and flagOpt     = ref true
 ;;
 
+(** Defaults *)
 let baseName = ref ""
 and srcName  = ref ""
-and binName  = ref ""
-and txtName  = ref ""
-and texName  = ref ""
-and julName  = ref ""
+and txtName  = ref "a.txt"
+and julName  = ref "a.jul"
+;;
+
+let inputProgram = ref ""
 ;;
 
 let fidVerbose = ref stdout
-and fidBinary  = ref stdout
 and fidText    = ref stdout
-and fidLaTeX   = ref stdout
 and fidJulia   = ref stdout
 ;;
 

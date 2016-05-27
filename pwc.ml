@@ -24,31 +24,30 @@ let arguments () =
   let arglist = [
     ("-v", Arg.Clear (flagVerbose), "Verbose Mode off  [default: off]");
     ("-V", Arg.Set   (flagVerbose), "Verbose Mode on   ");
-    ("-b", Arg.Clear (flagBinary),  "Binary Output off [default: off]");
-    ("-B", Arg.Set   (flagBinary),  "Binary Output on  ");
     ("-t", Arg.Clear (flagText),    "Text Output off   [default: off] ");
     ("-T", Arg.Set   (flagText),    "Text Output on    ");
-    ("-x", Arg.Clear (flagLaTeX),   "LaTeX Output off  [default: off] ");
-    ("-X", Arg.Set   (flagLaTeX),   "LaTeX Output on   ");
-    ("-m", Arg.Clear (flagJulia),   "Julia Output off [default: on] ");
-    ("-M", Arg.Set   (flagJulia),   "Julia Output on  ");
-    ("-u", Arg.Clear (flagUndef),   "Undefined off [default: off] ");
-    ("-U", Arg.Set   (flagUndef),   "Undefined used \n");
+    ("-j", Arg.Clear (flagJulia),   "Julia Output off [default: on] ");
+    ("-J", Arg.Set   (flagJulia),   "Julia Output on  ");
     ("-o", Arg.Clear (flagOpt),     "Optimisations off [default: off] ");
-    ("-O", Arg.Set   (flagOpt),     "Optimisations used \n")]
+    ("-O", Arg.Set   (flagOpt),     "Optimisations used");
+    ("-e", Arg.Set_string (inputProgram), "Input program passed as string \n")]
   and set_basename s =
     begin
       baseName := s;
       srcName := !baseName^".pw";
-      binName := !baseName^".pwi";
-      txtName := !baseName^".txt";
-      texName := !baseName^".tex";
       julName := !baseName^".jl";
     end
   and usage =
-    "Usage:\n\npwc basename [-v/-V][-b/-B][-t/-T][-x/-X][-m/-M][-u/-U][-o/-O]\n"
+    "Usage:\n\npwc [-e program | basename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
   in
-  Arg.parse arglist (set_basename) usage 
+  begin
+    Arg.parse arglist (set_basename) usage; 
+    if !baseName = "" && !inputProgram = "" 
+    then begin 
+      Arg.usage arglist usage; 
+      exit 1 
+    end
+  end
 ;;
 
 (***********************************************************************)
@@ -57,17 +56,13 @@ let open_files () =
   begin
     if !flagVerbose then print_string "Open Output Files";
     if !flagVerbose then print_newline ();
-    if !flagBinary then fidBinary := open_out !binName;
     if !flagText   then fidText := open_out !txtName;
-    if !flagLaTeX  then fidLaTeX := open_out !texName;
     if !flagJulia  then fidJulia := open_out !julName;
   end
 ;;
 
 let abort msg =
-  if !flagBinary then Sys.remove !binName; 
   if !flagText   then Sys.remove !txtName; 
-  if !flagLaTeX  then Sys.remove !texName; 
   if !flagJulia  then Sys.remove !julName;
   output_string stderr msg;
   output_string stderr ". Aborting...\n";
@@ -82,7 +77,7 @@ let show_files () =
     print_string !srcName; 
     print_newline ();
     print_string "Output File: "; 
-    print_string !binName; 
+    print_string !julName; 
     print_newline ();
   end
 ;;
@@ -154,8 +149,16 @@ let main () =
   open_files ();
 
   try 
+    (*
     let srcFile = open_in !srcName in
     let lexBuffer = Lexing.from_channel srcFile in
+    *)
+
+    let lexBuffer = 
+      if String.length !baseName = 0 
+      then Lexing.from_string !inputProgram
+      else Lexing.from_channel (open_in !srcName) in
+
 
     begin
       try
