@@ -50,96 +50,110 @@ let weight_to_string (p,q) sep =
   if q == 1 then ps else ps ^ sep ^ qs
 ;;
 
-(**   type ssp (statement special print)
+(**   stmt_printer (statement printer)
  * 
- * Holds special print functions for all different variants of statement
+ * Holds print functions for all different variants of statement
  * *)
-type ssp = 
-  {  stop_sp     : (unit -> string) option;
-     skip_sp     : (unit -> string) option;
-     tagged_sp   : (tag * stmt -> string) option;
-     assign_sp   : (varref * aexpr -> string) option;
-     random_sp   : (varref * range -> string) option;
-     sequence_sp : (stmt * stmt -> string) option;
-     if_sp       : (bexpr * stmt * stmt -> string) option;
-     while_sp    : (bexpr * stmt -> string) option;
-     for_sp      : (stmt * bexpr * stmt * stmt -> string) option;
-     case_sp     : (aexpr * cstmt list * stmt -> string) option;
-     repeat_sp   : (stmt * bexpr -> string) option;
-     choose_sp   : (wstmt list -> string) option;
-     goto_sp     : (tag -> string) option;
+type stmt_printer = 
+  {  print_stop     : unit -> string;
+     print_skip     : unit -> string;
+     print_tagged   : string -> string-> string;
+     print_assign   : string -> string -> string;
+     print_random   : string -> string -> string;
+     print_sequence : string -> string -> string;
+     print_if       : string -> string -> string -> string;
+     print_while    : string -> string -> string;
+     print_for      : string -> string -> string -> string -> string;
+     print_case     : string -> string -> string -> string;
+     print_repeat   : string -> string -> string;
+     print_choose   : string -> string;
+     print_goto     : string -> string;
   }
 ;;
 
-let default_ssp = 
-  {  stop_sp     = None;  
-     skip_sp     = None;   
-     tagged_sp   = None;
-     assign_sp   = None; 
-     random_sp   = None;
-     sequence_sp = None; 
-     if_sp       = None;
-     while_sp    = None;
-     for_sp      = None;
-     case_sp     = None;
-     repeat_sp   = None;
-     choose_sp   = None;
-     goto_sp     = None;
+let print_stop () = "stop"
+and print_skip () = "skip"
+and print_tagged t s = t ^ ": " ^ s
+and print_assign vr a = vr ^ ":= " ^ a
+and print_random vr r = vr ^ "?= {" ^ r ^ "}"
+and print_sequence s1 s2 = s1 ^ "; " ^ s2
+and print_if b s1 s2 = "if " ^ b ^ " then " ^ s1 ^ " else " ^ s2
+and print_while b s = "while " ^ b ^ " do " ^ s ^ " od"
+and print_for i b u s = "for " ^ i ^ "; " ^ b ^ "; " ^ u ^ " do" ^ s ^ " od"
+and print_case a css d = "case " ^ a ^ css ^ " default: " ^ d
+and print_repeat s b = "repeat " ^ s ^ " until " ^ b
+and print_choose l = "choose " ^ l ^ " ro"
+and print_goto t = "goto " ^ t
+;;
+
+let default_sp = 
+  {  print_stop     = print_stop;  
+     print_skip     = print_skip;   
+     print_tagged   = print_tagged;
+     print_assign   = print_assign; 
+     print_random   = print_random;
+     print_sequence = print_sequence; 
+     print_if       = print_if;
+     print_while    = print_while;
+     print_for      = print_for;
+     print_case     = print_case;
+     print_repeat   = print_repeat;
+     print_choose   = print_choose;
+     print_goto     = print_goto;
   }
 ;;
 
 let rec stmt_to_string 
-            ?(ssp=default_ssp) ?(asp=default_asp) ?(bsp=default_bsp) stmt =
+            ?(sp=default_sp) ?(ap=default_ap) ?(bp=default_bp) stmt =
   match stmt with 
   | Stop -> 
-      to_string ssp.stop_sp () "stop"
+      sp.print_stop () 
   | Skip -> 
-      to_string ssp.skip_sp () "skip"
+      sp.print_skip () 
   | Tagged(t,s) -> 
-      let ss = stmt_to_string ~ssp:ssp s 
-      in  to_string ssp.tagged_sp (t,s) (t ^ ": " ^ ss)
+      let s = stmt_to_string ~sp:sp s 
+      in  sp.print_tagged t s
   | Assign(x,a) -> 
-      let xs = varref_to_string ~vrsp:asp.vr_sp x
-      and e = aexpr_to_string ~asp:asp a
-      in  to_string ssp.assign_sp (x,a) (xs ^ " := " ^ e)
+      let x = varref_to_string ~vrp:ap.print_vr x
+      and a = aexpr_to_string ~ap:ap a
+      in  sp.print_assign x a
   | Random(x,r) -> 
-      let xs = varref_to_string ~vrsp:asp.vr_sp x
-      and rs = range_to_string r
-      in  to_string ssp.random_sp (x,r) (xs ^ " ?= {" ^ rs ^ "}")
+      let x = varref_to_string ~vrp:ap.print_vr x
+      and r = range_to_string r
+      in  sp.print_random x r
   | Sequence(s1,s2) ->
-      let s1s = stmt_to_string ~ssp:ssp s1
-      and s2s = stmt_to_string ~ssp:ssp s2
-      in  to_string ssp.sequence_sp (s1,s2) (s1s ^ "; " ^ s2s)
+      let s1 = stmt_to_string ~sp:sp s1
+      and s2 = stmt_to_string ~sp:sp s2
+      in  sp.print_sequence s1 s2
   | If(b,s1,s2) -> 
-      let bs  = bexpr_to_string ~asp:asp ~bsp:bsp b
-      and s1s = stmt_to_string ~ssp:ssp s1
-      and s2s = stmt_to_string ~ssp:ssp s2
-      in  to_string ssp.if_sp (b,s1,s2) ("if "^ bs ^" then "^ s1s ^" else "^ s2s)
+      let b  = bexpr_to_string ~ap:ap ~bp:bp b
+      and s1 = stmt_to_string ~sp:sp s1
+      and s2 = stmt_to_string ~sp:sp s2
+      in  sp.print_if b s1 s2
   | While(b,s) ->
-      let bs = bexpr_to_string ~bsp:bsp b
-      and ss = stmt_to_string ~ssp:ssp s
-      in  to_string ssp.while_sp (b,s) ("while " ^ bs ^ " do " ^ ss ^ " od") 
+      let b = bexpr_to_string ~bp:bp b
+      and s = stmt_to_string ~sp:sp s
+      in  sp.print_while b s
   | For(i,b,u,s) ->
-      let is = stmt_to_string ~ssp:ssp i
-      and bs = bexpr_to_string ~asp:asp ~bsp:bsp b
-      and us = stmt_to_string ~ssp:ssp s
-      and ss = stmt_to_string ~ssp:ssp s
-      in  to_string ssp.for_sp (i,b,u,s) 
-          ("for " ^ is ^ "; " ^ bs ^ "; " ^ us ^ " do" ^ ss ^ " od")
+      let i = stmt_to_string ~sp:sp i
+      and b = bexpr_to_string ~ap:ap ~bp:bp b
+      and u = stmt_to_string ~sp:sp s
+      and s = stmt_to_string ~sp:sp s
+      in  sp.print_for i b u s 
   | Case(a,l,d) -> 
-      let e = aexpr_to_string ~asp:asp a
-      and ls = cstmts_to_string l
-      and ds = stmt_to_string ~ssp:ssp d
-      in  to_string ssp.case_sp (a,l,d) ("case " ^ e ^ ls ^ " default: " ^ ds)
+      let a = aexpr_to_string ~ap:ap a
+      and l = cstmts_to_string l
+      and d = stmt_to_string ~sp:sp d
+      in  sp.print_case a l d 
   | Repeat(s,b) ->
-      let ss = stmt_to_string ~ssp:ssp s
-      and bs = bexpr_to_string ~asp:asp ~bsp:bsp b
-      in  to_string ssp.repeat_sp (s,b) ("repeat " ^ ss ^ " until " ^ bs)
+      let s = stmt_to_string ~sp:sp s
+      and b = bexpr_to_string ~ap:ap ~bp:bp b
+      in  sp.print_repeat s b 
   | Choose(l) ->
-      let ls = wstmts_to_string l
-      in  to_string ssp.choose_sp l ("choose " ^ ls ^ " ro")
+      let l = wstmts_to_string l
+      in  sp.print_choose l 
   | Goto(t) ->
-      to_string ssp.goto_sp t ("goto " ^ t)
+       sp.print_goto t 
 and
 cstmt_to_string (i,s) = 
   let i = string_of_int i 

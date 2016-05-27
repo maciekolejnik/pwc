@@ -180,95 +180,109 @@ let rec check_bexpr bexpr =
 (** Generic Output                                                     *)
 (***********************************************************************)
 
-(**
-      asp
- 
-  Special printer data structure for aexpr 
- *)
-type asp =
-  {  num_sp   : (int -> string) option;
-     vr_sp    : vrsp;
-     minus_sp : (aexpr -> string) option;
-     sum_sp   : (aexpr * aexpr -> string) option;
-     diff_sp  : (aexpr * aexpr -> string) option;
-     prod_sp  : (aexpr * aexpr -> string) option;
-     div_sp   : (aexpr * aexpr -> string) option;
-     mod_sp   : (aexpr * aexpr -> string) option;
-     bnot_sp  : (aexpr -> string) option;
-     bxor_sp  : (aexpr * aexpr -> string) option;
-     band_sp  : (aexpr * aexpr -> string) option;
-     bor_sp   : (aexpr * aexpr -> string) option;
-  }
-(**
-      vrsp
- 
-  Special printer data stricture for variable references
- *)
-and vrsp =
-  {  var_sp : (id -> string) option;
-     arr_sp : (id * aexpr -> string) option;
-  }
-;;
-
-let rec default_asp =
-  {  num_sp   = None;  
-     vr_sp    = default_vrsp;
-     minus_sp = None;  
-     sum_sp   = None;  
-     diff_sp  = None; 
-     prod_sp  = None; 
-     div_sp   = None;  
-     mod_sp   = None;  
-     bnot_sp  = None;  
-     bxor_sp  = None;  
-     band_sp  = None;  
-     bor_sp   = None;  
-  }
-and default_vrsp =
-  {  var_sp = None;
-     arr_sp = None;
-  }
+let apply_infix op e1 e2 = "(" ^ e1 ^ op ^ e2 ^ ")"
 ;;
 
 (**
- *     aexpr_to_string ?asp aexpr
+      aexpr_printer
+ 
+  Printer data structure for aexpr 
+ *)
+type aexpr_printer =
+  {  print_num   : int -> string;
+     print_vr    : varref_printer;
+     print_minus : string -> string;
+     print_sum   : string -> string -> string;
+     print_diff  : string -> string -> string;
+     print_prod  : string -> string -> string;
+     print_div   : string -> string -> string;
+     print_mod   : string -> string -> string;
+     print_bnot  : string -> string;
+     print_bxor  : string -> string -> string;
+     print_band  : string -> string -> string;
+     print_bor   : string -> string -> string;
+  }
+(**
+      varref_printer
+ 
+  Printer data stricture for variable references
+ *)
+and varref_printer =
+  {  print_var : id -> string;
+     print_arr : id -> string -> string;
+  }
+;;
+
+let print_num i = string_of_int i 
+and print_varref v = v
+and print_minus e = "(- " ^ e ^ ")"
+and print_sum e1 e2 = apply_infix "+" e1 e2
+and print_diff e1 e2 = apply_infix "-" e1 e2
+and print_prod e1 e2 = apply_infix "*" e1 e2
+and print_div e1 e2 = apply_infix "/" e1 e2
+and print_mod e1 e2 = apply_infix "%" e1 e2
+and print_bxor e1 e2 = apply_infix "$" e1 e2
+and print_band e1 e2 = apply_infix "&" e1 e2
+and print_bor e1 e2 = apply_infix "|" e1 e2
+and print_bnot e = "~" ^ e
+and print_var v = v
+and print_arr id e = id ^ "[" ^ e ^ "]"
+;;
+
+let rec default_ap =
+  {  print_num   = print_num;  
+     print_vr    = default_vrp;
+     print_minus = print_minus;  
+     print_sum   = print_sum;  
+     print_diff  = print_diff; 
+     print_prod  = print_prod; 
+     print_div   = print_div;  
+     print_mod   = print_mod;  
+     print_bnot  = print_bnot;  
+     print_bxor  = print_bxor;  
+     print_band  = print_band;  
+     print_bor   = print_bor;  
+  }
+and default_vrp =
+  {  print_var = print_var;
+     print_arr = print_arr;
+  }
+;;
+
+(**
+ *     aexpr_to_string ?ap aexpr
  *
  * Return the string representation of `aexpr`, using 
- * the aexpr special printer `asp` if present
+ * the aexpr printer `ap` if present
  *)
-let rec aexpr_to_string ?(asp=default_asp) aexpr = 
-  (*let vrsp = some_or_default asp.vr_sp default_vrsp in*)
-  let infix_operator sp op e1 e2 = 
-    let e1s = aexpr_to_string ~asp:asp e1 
-    and e2s = aexpr_to_string ~asp:asp e2
-    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
+let rec aexpr_to_string ?(ap=default_ap) aexpr = 
   match aexpr with 
   | Num(c) -> 
-      to_string asp.num_sp c (string_of_int c)
+      ap.print_num c
   | Varref(v) -> 
-      varref_to_string ~vrsp:asp.vr_sp v
+      varref_to_string ~vrp:ap.print_vr v
   | Minus(e) ->   
-      let es = aexpr_to_string ~asp:asp e
-      in  to_string asp.minus_sp e ("(- " ^ es ^ ")")
+      let e = aexpr_to_string ~ap:ap e
+      in  ap.print_minus e
   | Sum(e1,e2) -> 
-      infix_operator asp.sum_sp "+" e1 e2
+      apply ap.print_sum ap e1 e2
   | Diff(e1,e2) -> 
-      infix_operator asp.diff_sp "-" e1 e2
+      apply ap.print_diff ap e1 e2
   | Prod(e1,e2) -> 
-      infix_operator asp.prod_sp "*" e1 e2
+      apply ap.print_prod ap e1 e2
   | Div(e1,e2) -> 
-      infix_operator asp.div_sp "/" e1 e2
+      apply ap.print_div ap e1 e2
   | Mod(e1,e2) ->
-      infix_operator asp.mod_sp "%" e1 e2
+      apply ap.print_mod ap e1 e2
   | BNot(e) -> 
-      let es = aexpr_to_string ~asp:asp e
-      in  to_string asp.bnot_sp e ("~ " ^ es)
+      let e = aexpr_to_string ~ap:ap e
+      in  ap.print_bnot e
   | BXor(e1,e2) -> 
-      infix_operator asp.bxor_sp "$" e1 e2
+      apply ap.print_bxor ap e1 e2
   | BAnd(e1,e2) ->
-      infix_operator asp.band_sp "&" e1 e2
+      apply ap.print_band ap e1 e2
   | BOr(e1,e2) -> 
-      infix_operator asp.bor_sp "|" e1 e2
+      apply ap.print_bor ap e1 e2
 and
 (**
  *     varref_to_string ?asp aexpr
@@ -277,88 +291,105 @@ and
  * the aexpr special printer `asp` and varref special printer `vrsp`,
  * if present
  *)
-varref_to_string ?(vrsp=default_vrsp) ?(asp=default_asp) vr =
+varref_to_string ?(vrp=default_vrp) ?(ap=default_ap) vr =
   match vr with
   | Var(v) -> 
-      to_string vrsp.var_sp v v
+      vrp.print_var v
   | ArrElem(a,e) -> 
-      let s = a ^ "[" ^ aexpr_to_string ~asp:asp e ^ "]" (* TODO: change!! *)
-      in  to_string vrsp.arr_sp (a,e) s
+      let e = aexpr_to_string ~ap:ap e
+      in  vrp.print_arr a e
+and apply print_fun ap e1 e2 =
+  let e1 = aexpr_to_string ~ap:ap e1 
+  and e2 = aexpr_to_string ~ap:ap e2 
+  in print_fun e1 e2
 ;;
 
 (***********************************************************************)
 	
 (**
- *     bsp
+ *     bexpr_printer
  *
- * Special printer data structure for bexpr 
+ * Printer data structure for bexpr 
  *)
-type bsp =
-  {  true_sp    : (unit -> string) option;
-     false_sp   : (unit -> string) option;
-     not_sp     : (bexpr -> string) option;
-     and_sp     : (bexpr * bexpr -> string) option;
-     or_sp      : (bexpr * bexpr -> string) option;
-     lesser_sp  : (aexpr * aexpr -> string) option;
-     lequal_sp  : (aexpr * aexpr -> string) option;
-     equal_sp   : (aexpr * aexpr -> string) option;
-     grequal_sp : (aexpr * aexpr -> string) option;
-     greater_sp : (aexpr * aexpr -> string) option;
+type bexpr_printer =
+  {  print_true    : unit -> string;
+     print_false   : unit -> string;
+     print_not     : string -> string;
+     print_and     : string -> string -> string;
+     print_or      : string -> string -> string;
+     print_lesser  : string -> string -> string;
+     print_lequal  : string -> string -> string;
+     print_equal   : string -> string -> string;
+     print_grequal : string -> string -> string;
+     print_greater : string -> string -> string;
   }
 ;;
 
-let default_bsp =
-  {  true_sp    = None;  
-     false_sp   = None;  
-     not_sp     = None;  
-     and_sp     = None;  
-     or_sp      = None; 
-     lesser_sp  = None; 
-     lequal_sp  = None;  
-     equal_sp   = None;  
-     grequal_sp = None;  
-     greater_sp = None;  
+let print_true () = "true"
+and print_false () = "false"
+and print_not e = "(~" ^ e ^ ")"
+and print_and e1 e2 = apply_infix "&" e1 e2
+and print_or e1 e2 = apply_infix "||" e1 e2
+and print_lesser e1 e2 = apply_infix "<" e1 e2
+and print_lequal e1 e2 = apply_infix "=<" e1 e2
+and print_equal e1 e2 = apply_infix "==" e1 e2
+and print_grequal e1 e2 = apply_infix ">=" e1 e2
+and print_greater e1 e2 = apply_infix ">" e1 e2
+;;
+
+let default_bp =
+  {  print_true    = print_true;  
+     print_false   = print_false;  
+     print_not     = print_not;  
+     print_and     = print_and;  
+     print_or      = print_or; 
+     print_lesser  = print_lesser; 
+     print_lequal  = print_lequal;  
+     print_equal   = print_equal;  
+     print_grequal = print_grequal;  
+     print_greater = print_greater;  
   }
 ;;
 
 (**
- *     bexpr_to_string ?asp ?bsp bexpr
+ *     bexpr_to_string ?ap ?bp bexpr
  *
  * Return the string representation of `bexpr`, using 
- * the aexpr special printer `asp` and bexpr special
- * printer `bsp` if present
+ * the aexpr printer `ap` and bexpr 
+ * printer `bp` if present
  *)
-let rec bexpr_to_string ?(asp=default_asp) ?(bsp=default_bsp) bexpr = 
-  let aexpr_infix_operator sp op e1 e2 = 
-    let e1s = aexpr_to_string ~asp:asp e1 
-    and e2s = aexpr_to_string ~asp:asp e2
-    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") 
-  and bexpr_infix_operator sp op e1 e2 = 
-    let e1s = bexpr_to_string ~asp:asp ~bsp:bsp e1 
-    and e2s = bexpr_to_string ~asp:asp ~bsp:bsp e2
-    in to_string sp (e1,e2) ("(" ^ e1s ^ op ^ e2s ^ ")") in
+let rec bexpr_to_string ?(ap=default_ap) ?(bp=default_bp) bexpr = 
   match bexpr with 
   | True -> 
-      to_string bsp.true_sp () "true"
+      bp.print_true () 
   | False ->  
-      to_string bsp.false_sp () "false"
+      bp.print_false () 
   | Not(e) ->   
-      let es = bexpr_to_string ~asp:asp ~bsp:bsp e
-      in  to_string bsp.not_sp e ("(- " ^ es ^ ")")
+      let e = bexpr_to_string ~ap:ap ~bp:bp e
+      in  bp.print_not e 
   | And(e1,e2) -> 
-      bexpr_infix_operator bsp.and_sp "&&" e1 e2
+      apply_bexpr bp.print_and ap bp e1 e2
   | Or(e1,e2) -> 
-      bexpr_infix_operator bsp.or_sp "||" e1 e2
+      apply_bexpr bp.print_or ap bp e1 e2
   | Lesser(e1,e2) -> 
-      aexpr_infix_operator bsp.lesser_sp "<" e1 e2
+      apply_aexpr bp.print_lesser ap e1 e2
   | LeEqual(e1,e2) -> 
-      aexpr_infix_operator bsp.lequal_sp "=<" e1 e2
+      apply_aexpr bp.print_lequal ap e1 e2
   | Equal(e1,e2) ->
-      aexpr_infix_operator bsp.equal_sp "==" e1 e2
+      apply_aexpr bp.print_equal ap e1 e2
   | GrEqual(e1,e2) -> 
-      aexpr_infix_operator bsp.grequal_sp ">=" e1 e2
+      apply_aexpr bp.print_grequal ap e1 e2
   | Greater(e1,e2) ->
-      aexpr_infix_operator bsp.greater_sp ">" e1 e2
+      apply_aexpr bp.print_greater ap e1 e2
+(** Aixiliary *)
+and apply_bexpr print_fun ap bp e1 e2 =
+  let e1 = bexpr_to_string ~ap:ap ~bp:bp e1 
+  and e2 = bexpr_to_string ~ap:ap ~bp:bp e2 
+  in print_fun e1 e2
+and apply_aexpr print_fun ap e1 e2 =
+  let e1 = aexpr_to_string ~ap:ap e1 
+  and e2 = aexpr_to_string ~ap:ap e2 
+  in print_fun e1 e2
 ;;
 
 (***********************************************************************)
@@ -391,66 +422,56 @@ let print_bexpr e = output_bexpr stdout e
 (***********************************************************************)
 
 (**
- *     julia_asp (aexpr special printer)
+ *     julia_ap (aexpr printer)
  *
  * Overwrites the default printing with julia specific ways of printing
  * variables and division
  *)
-let rec julia_asp = 
+let rec julia_ap = 
   let varref = 
-    {  var_sp = (Some var);
-       arr_sp = (Some arr);
+    {  print_var = var;
+       print_arr = arr;
     }
   in
-  { default_asp with 
-    vr_sp  = varref; 
-    div_sp = (Some div);
+  { default_ap with 
+    print_vr  = varref; 
+    print_div = div;
   }
 and var v = 
   match meta v with
   | Constant(i) -> string_of_int i
   | Primitive(_) -> id2rng v ^ in_sq_brackets (values (id2ord v)) 
   | _ -> failwith "Internal error: unexpected variable"
-and arr (a,e) = 
-  let ordinal = id2ord a ^ " + " ^ (aexpr_to_string ~asp:julia_asp e) (* TODO *)
+and arr a e = 
+  let ordinal = id2ord a ^ " + " ^ e (* TODO *)
   in id2rng a ^ in_sq_brackets (values ordinal) 
-and div (e1,e2) = 
-  let e1 = aexpr_to_string ~asp:julia_asp e1
-  and e2 = aexpr_to_string ~asp:julia_asp e2 
-  in "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
+and div e1 e2 = 
+  "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
 ;;
 
 let aexpr_to_julia_string e =
-  aexpr_to_string ~asp:julia_asp e
+  aexpr_to_string ~ap:julia_ap e
 ;;
 
 let bexpr_to_julia_string e =
-  bexpr_to_string ~asp:julia_asp e
+  bexpr_to_string ~ap:julia_ap e
 ;;
 
 (** 
- *     julia_aexpr e
- *
- *  Writes arithmetic expression `e` to the julia file.
- *
- *  Uses special printer `asp` defiend above to overwrite the 
- *  default way of printing (in this case) variables and 
- *  division operation
- *)
+      julia_aexpr e
+ 
+   Writes arithmetic expression `e` to the julia file.
+*)
 let julia_aexpr e = 
-  julia_string (aexpr_to_string ~asp:julia_asp e)
+  julia_string (aexpr_to_julia_string e)
 ;;
 
 (** 
- *     julia_bexpr e
- *
- *  Writes boolean expression `e` to the julia file.
- *
- *  Uses special printer `asp` defiend above to overwrite the 
- *  default way of printing (in this case) variables and 
- *  division operation
- *)
+      julia_bexpr e
+ 
+   Writes boolean expression `e` to the julia file.
+*)
 let julia_bexpr e =
-  julia_string (bexpr_to_string ~asp:julia_asp e)
+  julia_string (bexpr_to_julia_string e)
 ;;
 
