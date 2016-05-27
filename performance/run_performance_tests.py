@@ -9,8 +9,8 @@ JULIA_PATH = "julia"
 OCTAVE_PWC_PATH = "pwc_octave"
 JULIA_PWC_PATH = "pwc"
 
-def compile(compiler, file):
-  p = subprocess.Popen([compiler,file], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+def compile(compiler, program):
+  p = subprocess.Popen([compiler,"-e",program], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   out,err = p.communicate()
   if p.returncode != 0:
     sys.stdout.write("\n")
@@ -22,7 +22,6 @@ def compile(compiler, file):
 def calculate_average_execution_time(exe, script, n):
   total_time = 0
   for x in range(1,n):
-  #while n > 0:
     p = subprocess.Popen([exe, "--eval", script], 
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out,err = p.communicate()
@@ -34,56 +33,49 @@ def calculate_average_execution_time(exe, script, n):
       line = out.split('\n')[-2]
       # we know the format of output so no error checking here
       total_time += float(re.findall("\d+\.\d+", line)[0])
-   # n = n - 1
-  print(total_time)
-  result = total_time / n
-  print(result)
-  return result
+  avg = total_time / n
+  print("Average time: " + str(avg))
 
 def test_performance(file):
-  print("Test performance on file " + file)
   basename = os.path.splitext(file)[0]
+  print("Test performance on file " + basename + "\n\n")
 
-  # sys.stdout used to prevent newline being printed
-  sys.stdout.write("Compile the file using octave pwc...")
-  sys.stdout.flush()
-  compile(OCTAVE_PWC_PATH, basename)
+  stub_file = open(file, "r")
+  stub = stub_file.read()
 
+  decls_file = open(basename + ".ds", "r")
+  decls = decls_file.read().split("or")
 
-  sys.stdout.write("Compile the file using julia pwc...")
-  sys.stdout.flush()
-  compile(JULIA_PWC_PATH, basename)
+  count = 1
+  for decl in decls:
+    print("Configuration " + str(count) + ":\n")
+    program = decl + stub
 
- 
-  octave_script = "tic(); " + basename + "; toc()"
-
-  print("Execute octave performance script")
-  calculate_average_execution_time(OCTAVE_PATH, octave_script, 5)
-
-  #p = subprocess.Popen([OCTAVE_PATH, "--eval", octave_script], 
-  #                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  #out,err = p.communicate()
-  #if p.returncode != 0:
-  #  print("Script failed")
-  #else:
-  #  line = out.split('\n')[-2]
-  #  time = re.findall("\d+\.\d+", line)[0]
-
- 
-  julia_script = "@time include(\"" + basename + ".jl\");"  
-
-  print("Execute julia performance script")
-  calculate_average_execution_time(JULIA_PATH, julia_script, 5)
-
-  #p = subprocess.Popen([JULIA_PATH, "--eval", julia_script], 
-  #                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  #out,err = p.communicate()
-  #if p.returncode != 0:
-  #  print("Script failed")
-  #else:
-  #  line = out.split('\n')[-2]
-  #  time = re.findall("\d+\.\d+", line)[0]
+    # sys.stdout used to prevent newline being printed
+    sys.stdout.write("Compile the file using octave pwc...")
+    sys.stdout.flush()
+    compile(OCTAVE_PWC_PATH, program)
 
 
-for file in glob.glob("*.pw"):
+    sys.stdout.write("Compile the file using julia pwc...")
+    sys.stdout.flush()
+    compile(JULIA_PWC_PATH, program)
+
+   
+    octave_script = "tic(); a; toc()"
+
+    print("Execute octave performance script")
+    calculate_average_execution_time(OCTAVE_PATH, octave_script, 5)
+
+   
+    julia_script = "@time include(\"a.jl\");"  
+
+    print("Execute julia performance script")
+    calculate_average_execution_time(JULIA_PATH, julia_script, 2)
+
+    print("\n\n")
+    count += 1
+
+
+for file in glob.glob("*.pws"):
   test_performance(file)
