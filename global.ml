@@ -10,9 +10,9 @@ and flagOpt     = ref true
 
 (** Defaults *)
 let baseName = ref ""
-and srcName  = ref ""
+and srcName  = ref "anonymous"
 and txtName  = ref "a.txt"
-and julName  = ref "a.jul"
+and julName  = ref "a.jl"
 ;;
 
 let inputProgram = ref ""

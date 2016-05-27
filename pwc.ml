@@ -34,14 +34,16 @@ let arguments () =
   and set_basename s =
     begin
       baseName := s;
-      srcName := !baseName^".pw";
-      julName := !baseName^".jl";
+      srcName := !baseName ^ ".pw";
+      txtName := !baseName ^ ".txt";
+      julName := !baseName ^ ".jl";
     end
   and usage =
     "Usage:\n\npwc [-e program | basename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
   in
   begin
     Arg.parse arglist (set_basename) usage; 
+    (** check that program was passed either as string or as file *)
     if !baseName = "" && !inputProgram = "" 
     then begin 
       Arg.usage arglist usage; 
@@ -149,13 +151,9 @@ let main () =
   open_files ();
 
   try 
-    (*
-    let srcFile = open_in !srcName in
-    let lexBuffer = Lexing.from_channel srcFile in
-    *)
 
     let lexBuffer = 
-      if String.length !baseName = 0 
+      if !baseName = "" 
       then Lexing.from_string !inputProgram
       else Lexing.from_channel (open_in !srcName) in
 
