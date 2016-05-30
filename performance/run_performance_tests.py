@@ -34,7 +34,7 @@ def calculate_average_execution_time(exe, script, n, report):
       # we know the format of output so no error checking here
       total_time += float(re.findall("\d+\.\d+", line)[0])
   avg = total_time / n
-  report.write("Average time: " + str(avg))
+  report.write("Average time: " + str(avg) + "\n")
 
 def test_performance(file, report):
   basename = os.path.splitext(file)[0]
