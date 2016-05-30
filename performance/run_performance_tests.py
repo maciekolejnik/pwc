@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from timeout import timeout, TimeoutError
 import datetime
 import subprocess
 import glob, os, sys
@@ -10,8 +11,8 @@ JULIA_PATH = "julia"
 OCTAVE_PWC_PATH = "pwc_octave"
 JULIA_PWC_PATH = "pwc"
 
-def compile(compiler, program, report):
-  p = subprocess.Popen([compiler,"-e",program], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+def compile(compiler, filename, report):
+  p = subprocess.Popen([compiler,filename], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
   out,err = p.communicate()
   if p.returncode != 0:
     report.write("\n")
@@ -19,6 +20,7 @@ def compile(compiler, program, report):
   else:
     report.write("SUCCESS\n")
 
+@timeout(10)
 def calculate_average_execution_time(exe, script, n, report):
   total_time = 0
   for x in range(0,n):
@@ -28,7 +30,7 @@ def calculate_average_execution_time(exe, script, n, report):
     if p.returncode != 0:
       report.write("Script execution failed:")
       report.write(err)
-      return -1
+      return 
     else:
       line = out.split('\n')[-2]
       # we know the format of output so no error checking here
@@ -36,12 +38,16 @@ def calculate_average_execution_time(exe, script, n, report):
   avg = total_time / n
   report.write("Average time: " + str(avg) + "\n")
 
-def test_performance(file, report):
+def test_performance_stub(file, report):
   basename = os.path.splitext(file)[0]
-  report.write("Test performance on file " + basename + "\n\n")
+  report.write("Test performance on stub file " + basename + "\n\n")
 
   stub_file = open(file, "r")
   stub = stub_file.read()
+
+  report.write("Stub is:\n")
+  report.write(stub)
+  report.write("\n\n")
 
   decls_file = open(basename + ".ds", "r")
   decls = decls_file.read().split("or")
@@ -50,33 +56,80 @@ def test_performance(file, report):
   for decl in decls:
     report.write("Configuration " + str(count) + ":\n\n")
     program = decl + stub
+    report.write("The declarations are as follows:\n")
+    report.write(decl)
 
-    #filename = "generated/" + basename + str(count) + ".pw"
-    #with open(filename, "w") as program_file:
-    #  program_file.write(program)
+    filename = "generated/" + basename + str(count) + ".pw"
+    with open(filename, "w") as program_file:
+      program_file.write(program)
 
-    # sys.stdout used to prevent newline being printed
     report.write("Compile the file using octave pwc...")
-    compile(OCTAVE_PWC_PATH, program, report)
+    compile(OCTAVE_PWC_PATH, "generated/" + basename + str(count), report)
 
 
     report.write("Compile the file using julia pwc...")
-    compile(JULIA_PWC_PATH, program, report)
-
-   
-    octave_script = "tic(); a; toc()"
+    compile(JULIA_PWC_PATH, filename, report)
+    
+    octave_script = "tic(); addpath('generated/.'); "
+    octave_script += basename + str(count)
+    octave_script += ";toc()"
 
     report.write("Execute octave performance script\n")
-    calculate_average_execution_time(OCTAVE_PATH, octave_script, 2, report)
+    try:
+      calculate_average_execution_time(OCTAVE_PATH, octave_script, 2, report)
+    except TimeoutError:
+      report.write("Timeout, aborting.\n\n")
 
    
-    julia_script = "@time include(\"a.jl\");"  
+    julia_script = "@time include(\"generated/"
+    julia_script += basename + str(count)
+    julia_script += ".jl\");"  
 
     report.write("Execute julia performance script\n")
-    calculate_average_execution_time(JULIA_PATH, julia_script, 2, report)
+    try:
+      calculate_average_execution_time(JULIA_PATH, julia_script, 2, report)
+    except TimeoutError:
+      report.write("Timeout, aborting.\n\n")
 
     report.write("\n\n")
     count += 1
+
+def test_performance(filename, report):
+  basename = os.path.splitext(filename)[0]
+  report.write("Test performance on file " + filename + "\n\n")
+
+  file = open(filename, "r")
+  program = file.read()
+
+  report.write("Compile the file using octave pwc...")
+  compile(OCTAVE_PWC_PATH, basename, report)
+
+
+  report.write("Compile the file using julia pwc...")
+  compile(JULIA_PWC_PATH, filename, report)
+  
+  octave_script = "tic(); "
+  octave_script += basename 
+  octave_script += ";toc()"
+
+  report.write("Execute octave performance script\n")
+  try: 
+    calculate_average_execution_time(OCTAVE_PATH, octave_script, 2, report)
+  except TimeoutError:
+    report.write("Timeout. Aborting.\n\n")
+
+ 
+  julia_script = "@time include(\""
+  julia_script += basename 
+  julia_script += ".jl\");"  
+
+  report.write("Execute julia performance script\n")
+  try:
+    calculate_average_execution_time(JULIA_PATH, julia_script, 2, report)
+  except TimeoutError:
+    report.write("Timeout. Aborting.\n\n")
+
+  report.write("\n\n")
 
 
 now = datetime.datetime.now()
@@ -84,6 +137,10 @@ timestamp = "_".join([str(now.year), str(now.month), str(now.day),
                       str(now.hour), str(now.minute), str(now.second)])
 report_filename = "report" + timestamp + ".txt"
 with open(report_filename, "w") as report:
+#report = sys.stdout
   for file in glob.glob("*.pws"):
-    test_performance(file, sys.stdout)
+    test_performance_stub(file, report)
+  for file in glob.glob("*.pw"):
+    test_performance(file, report)
+
 report.close()

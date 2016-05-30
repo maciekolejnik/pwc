@@ -1,0 +1,7 @@
+begin
+x := 2 * a;
+if z > 0 then b := z / 2 else b := (-z) / 2 fi;
+if x > 0 then y := b + c - x else y := b + c + x fi;
+z := c - a;
+stop
+end

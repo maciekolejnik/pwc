@@ -142,7 +142,7 @@ let error lexbuf =
   let line, col = position lexbuf
   and filename = in_quotes !srcName in
   let loc = "File " ^ filename ^ ", line " ^ line ^ ", character " ^ col ^ ":\n"
-  and err = "Error: Unexpected token"
+  and err = "Error: Unexpected token."
   in abort(loc ^ err)
 ;;
 
