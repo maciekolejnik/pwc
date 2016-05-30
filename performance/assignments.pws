@@ -1,0 +1,11 @@
+begin
+a ?= {0..p};
+b ?= {0..q};
+r := 0;
+while a > 0 do
+  r := r + b;
+  a := a - 1
+od;
+stop
+end
+  
