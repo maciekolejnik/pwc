@@ -31,18 +31,22 @@ let arguments () =
     ("-o", Arg.Clear (flagOpt),     "Optimisations off [default: off] ");
     ("-O", Arg.Set   (flagOpt),     "Optimisations used");
     ("-e", Arg.Set_string (inputProgram), "Input program passed as string \n")]
-  and set_basename s =
+  and set_filenames s =
+    begin try 
+      baseName := String.sub s 0 (String.index s '.')
+    with Not_found -> 
+      baseName := s
+    end;
     begin
-      baseName := s;
-      srcName := !baseName ^ ".pw";
+      srcName := s;
       txtName := !baseName ^ ".txt";
-      julName := !baseName ^ ".jl";
+      julName := !baseName ^ ".jl"
     end
   and usage =
-    "Usage:\n\npwc [-e program | basename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
+    "Usage:\n\npwc [-e program | filename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
   in
   begin
-    Arg.parse arglist (set_basename) usage; 
+    Arg.parse arglist (set_filenames) usage; 
     (** check that program was passed either as string or as file *)
     if !baseName = "" && !inputProgram = "" 
     then begin 
