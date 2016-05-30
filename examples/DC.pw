@@ -1,19 +1,24 @@
 var
-  b : {0..3}; # who paid the bill
-  s[3] : {0,1}; # each pair secrets
-  p[3] : {0,1}; # publicly announced bit
-  r : {0,1}; # xor of the publicly announced bits
-  i : {0..3}; # loop variable
+  b : {0..3};
+  s[3] : {0,1}; 
+  p[3] : {0,1}; 
+  r : {0,1}; 
+  i : {0..3}; 
 
 begin
+# randomly select who paid the bill, 0,1,2 are cryptographers, 3 is NSA
+b ?= {0,1,2,3};
+# each cryptographer tosses a coin 
 for i:=0; i<3; i:=i+1 do
   s[i] ?= {0,1}
 od;
+# announce bits publicly
 for i:=0; i<3; i:=i+1 do
-  if ! (b == i)
-  then p[i] := s[i] ^ s[(i-1)%3]
-  else p[i] := ~ (s[i] ^ s[(i-1)%3])
+  if b != i
+  then p[i] := s[i] ^ s[(i+1)%3]
+  else p[i] := 1 ^ (s[i] ^ s[(i+1)%3])
   fi
 od;
-r := p[0] ^ p[1] ^ p[2]
+r := p[0] ^ p[1] ^ p[2];
+stop
 end

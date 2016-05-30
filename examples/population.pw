@@ -1,6 +1,6 @@
 var
-  n :    {0..100};
-  prev : {0..100};
+  n :    {0..10};
+  prev : {0..10};
 
 begin 
 # Initial population

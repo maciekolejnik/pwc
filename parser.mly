@@ -3,7 +3,7 @@
 %token PLUS MINUS TIMES DIV MOD
 %token NOT AND LOR
 %token BITAND BITOR BITXOR BITNOT
-%token LE LEQ EQ GEQ GR
+%token LE LEQ EQ NEQ GEQ GR
 %token LPAR RPAR
 %token BACK BAR
 %token TRUE FALSE INFINTE
@@ -139,6 +139,7 @@ bexpr:
 | aexpr LE aexpr		{ Expression.Lesser($1,$3) }
 | aexpr LEQ aexpr		{ Expression.LeEqual($1,$3) }
 | aexpr EQ aexpr		{ Expression.Equal($1,$3) }
+| aexpr NEQ aexpr		{ Expression.NotEqual($1,$3) }
 | aexpr GEQ aexpr		{ Expression.GrEqual($1,$3) }
 | aexpr GR aexpr		{ Expression.Greater($1,$3) }
 ;

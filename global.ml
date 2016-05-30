@@ -5,7 +5,7 @@
 let flagVerbose = ref false
 and flagText    = ref false
 and flagJulia   = ref true 
-and flagOpt     = ref true
+and flagOpt     = ref false 
 ;;
 
 (** Defaults *)

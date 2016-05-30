@@ -179,6 +179,15 @@ let julia_dict name entries =
   julia_string "\n)\n"
 ;;
 
+let rec remove_consts decls =
+  match decls with
+  | [] -> []
+  | hd::tl ->
+      match snd hd with
+      | Constant(i) -> remove_consts tl
+      | _ -> hd::remove_consts tl
+;;
+
 (***********************************************************************)
 
 let ordinals decls =
@@ -194,7 +203,8 @@ let id2ord_entry (id,m) i =
 ;;
 
 let julia_ids2ord decls =
-  julia_dict "id2ord" (List.map2 id2ord_entry decls (ordinals decls));
+  let decls = remove_consts decls 
+  in  julia_dict "id2ord" (List.map2 id2ord_entry decls (ordinals decls));
 ;;
 
 (***********************************************************************)
@@ -204,7 +214,7 @@ let id2rng_entry (id,m) =
 ;;
 
 let julia_ids2rng decls =
-  julia_dict "id2rng" (List.map id2rng_entry decls);
+  julia_dict "id2rng" (List.map id2rng_entry (remove_consts decls));
 ;;
 
 (***********************************************************************)

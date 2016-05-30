@@ -30,11 +30,12 @@ type bexpr =
    | Not of bexpr
    | And of bexpr * bexpr
    | Or  of bexpr * bexpr
-   | Lesser  of aexpr * aexpr
-   | LeEqual of aexpr * aexpr
-   | Equal   of aexpr * aexpr
-   | GrEqual of aexpr * aexpr
-   | Greater of aexpr * aexpr
+   | Lesser   of aexpr * aexpr
+   | LeEqual  of aexpr * aexpr
+   | Equal    of aexpr * aexpr
+   | NotEqual of aexpr * aexpr
+   | GrEqual  of aexpr * aexpr
+   | Greater  of aexpr * aexpr
 ;;
 
 (***********************************************************************)
@@ -66,6 +67,7 @@ let rec bexpr_vars bexpr =
   | Lesser(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
   | LeEqual(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
   | Equal(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
+  | NotEqual(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
   | GrEqual(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
   | Greater(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
 ;;
@@ -171,6 +173,7 @@ let rec check_bexpr bexpr =
   | Lesser(e1,e2) -> check_aexpr e1; check_aexpr e2
   | LeEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
   | Equal(e1,e2) -> check_aexpr e1; check_aexpr e2
+  | NotEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
   | GrEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
   | Greater(e1,e2) -> check_aexpr e1; check_aexpr e2
 ;;
@@ -260,7 +263,7 @@ let rec aexpr_to_string ?(ap=default_ap) aexpr =
   | Num(c) -> 
       ap.print_num c
   | Varref(v) -> 
-      varref_to_string ~vrp:ap.print_vr v
+      varref_to_string ~vrp:ap.print_vr ~ap:ap v
   | Minus(e) ->   
       let e = aexpr_to_string ~ap:ap e
       in  ap.print_minus e
@@ -320,6 +323,7 @@ type bexpr_printer =
      print_lesser  : string -> string -> string;
      print_lequal  : string -> string -> string;
      print_equal   : string -> string -> string;
+     print_notequal: string -> string -> string;
      print_grequal : string -> string -> string;
      print_greater : string -> string -> string;
   }
@@ -333,6 +337,7 @@ and print_or e1 e2 = apply_infix "||" e1 e2
 and print_lesser e1 e2 = apply_infix "<" e1 e2
 and print_lequal e1 e2 = apply_infix "=<" e1 e2
 and print_equal e1 e2 = apply_infix "==" e1 e2
+and print_notequal e1 e2 = apply_infix "!=" e1 e2
 and print_grequal e1 e2 = apply_infix ">=" e1 e2
 and print_greater e1 e2 = apply_infix ">" e1 e2
 ;;
@@ -346,6 +351,7 @@ let default_bp =
      print_lesser  = print_lesser; 
      print_lequal  = print_lequal;  
      print_equal   = print_equal;  
+     print_notequal= print_notequal;  
      print_grequal = print_grequal;  
      print_greater = print_greater;  
   }
@@ -377,6 +383,8 @@ let rec bexpr_to_string ?(ap=default_ap) ?(bp=default_bp) bexpr =
       apply_aexpr bp.print_lequal ap e1 e2
   | Equal(e1,e2) ->
       apply_aexpr bp.print_equal ap e1 e2
+  | NotEqual(e1,e2) ->
+      apply_aexpr bp.print_notequal ap e1 e2
   | GrEqual(e1,e2) -> 
       apply_aexpr bp.print_grequal ap e1 e2
   | Greater(e1,e2) ->

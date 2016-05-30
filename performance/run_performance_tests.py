@@ -21,7 +21,7 @@ def compile(compiler, program):
 
 def calculate_average_execution_time(exe, script, n):
   total_time = 0
-  for x in range(1,n):
+  for x in range(0,n):
     p = subprocess.Popen([exe, "--eval", script], 
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out,err = p.communicate()
@@ -51,6 +51,10 @@ def test_performance(file):
     print("Configuration " + str(count) + ":\n")
     program = decl + stub
 
+    #filename = "generated/" + basename + str(count) + ".pw"
+    #with open(filename, "w") as program_file:
+    #  program_file.write(program)
+
     # sys.stdout used to prevent newline being printed
     sys.stdout.write("Compile the file using octave pwc...")
     sys.stdout.flush()
@@ -65,13 +69,13 @@ def test_performance(file):
     octave_script = "tic(); a; toc()"
 
     print("Execute octave performance script")
-    calculate_average_execution_time(OCTAVE_PATH, octave_script, 5)
+    calculate_average_execution_time(OCTAVE_PATH, octave_script, 1)
 
    
     julia_script = "@time include(\"a.jl\");"  
 
     print("Execute julia performance script")
-    calculate_average_execution_time(JULIA_PATH, julia_script, 2)
+    calculate_average_execution_time(JULIA_PATH, julia_script, 1)
 
     print("\n\n")
     count += 1

@@ -33,7 +33,7 @@ type lblock =
 let rec blocks lstmt =
   match lstmt with 
      LStop(l) ->
-       [(l, BSkip)]
+       [(l, BStop)]
    | LSkip(l) ->
        [(l, BSkip)]
    | LTagged(l,s) ->

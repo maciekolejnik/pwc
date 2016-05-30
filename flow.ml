@@ -82,8 +82,9 @@ let flow lstmt =
         [linkNeg l (init s)] @ (auxFlow s) @ 
         (List.map (linkInv l) (final s))
     | LFor(l,i,b,u,s) ->
-        (auxFlow i) @ (List.map (linkInv l) (final i)) @
+        (auxFlow i) @ (auxFlow u) @ (auxFlow s) @
         [linkNeg l (init s)] @
+        (List.map (linkInv l) (final i)) @
         (List.map (linkInv (init u)) (final s)) @
         (List.map (linkInv l) (final u))
     | LCase(a,cls,d) ->

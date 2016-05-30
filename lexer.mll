@@ -62,6 +62,7 @@ rule token = parse
 | "<"		     { LE }
 | "<="		     { LEQ }
 | "=="		     { EQ }
+| "!="		     { NEQ }
 | ">="		     { GEQ }
 | ">"		     { GR }
 | "!"		     { NOT }
@@ -103,7 +104,6 @@ rule token = parse
 | "default"          { DEFAULT }
 | "esac"	     { ESAC }
 | "output"	     { OUTPUT }
-| "makearray"	     { MKARRAY }
 | "goto"             { GOTO }
   
 | "true"	     { TRUE }

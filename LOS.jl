@@ -737,4 +737,69 @@ function P(dims::Array{Int,1}, test::Function, c::Int)
   return R
 end
 
+
+#--------------------------------------------------------------------
+# Auxiliary functions used to analyse the state vector 
+#--------------------------------------------------------------------
+
+#= 
+ The state vector of a given pWhile program very often has large 
+ dimensions and quite a few non zero entries. It is usually 
+ hard to deduce anything form it by just looking at it.
+ However, one frequently needs to know the probabilties 
+ of some variables having certain values. The `find_probability`
+ function enables one to compute that easily. . 
+=#
+
+function match(values::Array{Int,1}, expected_values::Array{Int,1})
+  @assert length(values) == length(expected_values)
+  for i = 1:length(values)
+    if expected_values[i] != 0 && expected_values[i] != values[i]
+      return false
+    end
+  end
+  return true
+end
+
+"""
+    find_probability(dims, block, state_vector, expected_values)
+
+    Retrieve the probability of variables having values given
+    by `expected_values` given `state_vector`
+
+As usual, `dims` is an array holding ordered dimensions of variables.
+`state_vector` is the distribution of the probabilistic state of 
+the program. Finally, `expected_values` is an array specifying 
+expected values of variables (where as usual values are given as 
+indices into variable's range). The length of this array should be the 
+same as the length of `dims` and each entry should be smaller or equal 
+than the corresponding entry in `dims` (since a variable must take a value
+in its range). Moreover, expected value of any variable can be set to 0
+to denote that this variable may take any value in its range (this is 
+useful since in most cases we only care about some subset of variables)
+
+# Example
+```julia
+julia> find_probability([2,2],[1//2,0,0,0,1//2,0,0,0],[1,1])
+1//2
+
+julia> find_probability([2,2],[1//5,0,1//5,1//5,2//5,0,0,0],[1,0])
+3//5
+```
+"""
+function find_probability(dims::Array{Int,1}, state_vector, expected_values::Array{Int,1})
+  d = prod(dims) 
+  blocks = div(length(state_vector), d)
+  result = 0
+  for i = 1:d
+    values = unindex(dims, i)
+    if match(values, expected_values)
+      for j = 1:blocks
+        result += state_vector[(i-1) * blocks + j]
+      end
+    end
+  end
+  return result
+end
+
 1;
