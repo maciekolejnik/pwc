@@ -40,7 +40,11 @@ let arguments () =
     begin
       srcName := s;
       txtName := !baseName ^ ".txt";
-      julName := !baseName ^ ".jl"
+      if !flagOpt then begin
+        julName := !baseName ^ "_opt.jl"
+      end else begin
+        julName := !baseName ^ ".jl"
+      end
     end
   and usage =
     "Usage:\n\npwc [-e program | filename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
