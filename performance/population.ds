@@ -3,26 +3,34 @@ var
   prev : {0..10};
 or
 var 
-  n : {0..30};
-  prev : {0..30};
-or
-var 
   n : {0..50};
   prev : {0..50};
-or
-var 
-  n : {0..70};
-  prev : {0..70};
 or
 var 
   n : {0..100};
   prev : {0..100};
 or
 var 
-  n : {0..120};
-  prev : {0..120};
-or
-var 
   n : {0..150};
   prev : {0..150};
+or
+var 
+  n : {0..200};
+  prev : {0..200};
+or
+var 
+  n : {0..250};
+  prev : {0..250};
+or
+var 
+  n : {0..300};
+  prev : {0..300};
+or
+var 
+  n : {0..350};
+  prev : {0..350};
+or
+var 
+  n : {0..400};
+  prev : {0..400};
 

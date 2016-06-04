@@ -107,6 +107,16 @@ let print_blocks bs = output_blocks stdout bs
 (** Julia Output                                                       *)
 (***********************************************************************)
 
+(** 
+      idx2val ord index
+
+  Return julia string which retrieves the actual value of variable with 
+  ordinal `ord`, given the index `idx` of this value in variable's range
+*)
+let idx2val ord idx = 
+  "findfirst(" ^ ord2rng ord ^ ", " ^ idx ^ ")"
+;;
+
 (** Several auxiliary functions to make string building process sligthly
  * less painful 
  * Conventions for variable names:
@@ -145,25 +155,18 @@ let ua_opt ord idx_ords size asn_ords l =
 ;;
 
 let uc ord c = 
-  apply_julia_func "U_xk_c" ["dims"; ord; c]
+  apply_julia_func "U_xk_c" ["dims"; ord; idx2val ord c]
 ;;
 
 let ua_c ord size l c =
-  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; size; c]
+  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; size; idx2val ord c]
 ;;
 
 let ua_c_opt ord ords size l c =
-  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; ords; size; c]
+  apply_julia_func "Ua_c" ["dims"; ord; "arr_index" ^ l; 
+                           ords; size; idx2val ord c]
 ;;
 
-(***********************************************************************)
-(* CURRENTLY NOT USED *)
-let ff id i = 
-  "findfirst(" ^ id2rng id ^ ", " ^ i ^ ")"
-;;
-(***********************************************************************)
-
-(***********************************************************************)
 let ucs ord r = 
   List.map (uc ord) (List.map string_of_int r) 
 ;; 
@@ -291,9 +294,9 @@ let julia_test_function l bexpr =
  * Generate 'assign' function corresponding to label `l` 
  * and RHS expression `aexpr`
  * *)
-let julia_assign_function l aexpr =
+let julia_assign_function l varref aexpr =
   let name = "assign" ^ l
-  and ret = "return " ^ aexpr_to_julia_string aexpr
+  and ret = "return " ^ idx2val (ord varref) (aexpr_to_julia_string aexpr)
   in  julia_function name ["values"] [ret]
 ;;
 
@@ -330,7 +333,7 @@ let julia_helper (l,blk) =
   | BAsn(x,e) ->
       Expression.check_assigned_varref x;
       Expression.check_aexpr e;
-      julia_assign_function l e;
+      julia_assign_function l x e;
       julia_func_if_array l x
   | BRnd(x,r) -> 
       Expression.check_assigned_varref x;

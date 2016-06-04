@@ -78,6 +78,12 @@ let id varref =
   | ArrElem(id,e) -> id
 ;;
 
+let ord varref = 
+  match varref with
+  | Var(id) -> id2ord id
+  | ArrElem(id,e) -> id2ord id
+;;
+
 (** Right now assumes that varref is a valid reference (ie id exists) *)
 let ordinals varref =
   let m = Declaration.meta (id varref) in

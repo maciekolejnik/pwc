@@ -5,7 +5,7 @@
 let flagVerbose = ref false
 and flagText    = ref false
 and flagJulia   = ref true 
-and flagOpt     = ref false 
+and flagOpt     = ref true
 ;;
 
 (** Defaults *)
@@ -114,6 +114,10 @@ let id2ord id =
 
 let id2rng id = 
   "id2rng" ^ in_sq_brackets (in_quotes id)
+;;
+
+let ord2rng ord =
+  "ord2rng" ^ in_sq_brackets ord
 ;;
 
 let values ord = 

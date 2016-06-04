@@ -406,9 +406,8 @@ function U_xk_c(dims::Array{Int,1}, ordinal::Int, c::Int)
     R = kron(R, I(dims[i]))
   end
   # TODO: possibly change for value out of range!
-  value = findfirst(ord2rng[ordinal], c)
-  if value > 0
-    R = kron(R, U_c(dims[ordinal], value))
+  if c > 0
+    R = kron(R, U_c(dims[ordinal], c))
   else
     R = kron(R, spzeros(Int, dims[ordinal], dims[ordinal]))
   end
@@ -443,9 +442,7 @@ function Ue(dims::Array{Int,1}, ordinal::Int, update::Function)
   R = spzeros(Int,d,d)
   for i = 1:d
     values = unindex(dims, i)
-    #values[ordinal] = update(values) # might be that the value computed here
-                                     # falls out of range (so is 0)
-    values[ordinal] = findfirst(ord2rng[ordinal], update(values))
+    values[ordinal] = update(values)  
     if values[ordinal] > 0
       R[i,index(dims, values)] = 1
     end
@@ -489,7 +486,7 @@ function Ue(dims::Array{Int,1}, ordinal::Int,
   for i = 1:d
     values_restricted = unindex(dims_restricted, i)
     values = extend(values_restricted, swaps, length(dims))
-    values_restricted[newordinal] = findfirst(ord2rng[ordinal], update(values))
+    values_restricted[newordinal] = update(values)
     if values_restricted[newordinal] > 0
       R[i, index(dims_restricted, values_restricted)] = 1
     end
@@ -525,8 +522,7 @@ function Ua_c(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
     values = unindex(dims, i)
     pos = compute_index(values) # TODO: handle the case of pos out of bounds properly
     if valid_index(size, pos + 1) 
-      #values[ordinal + pos] = update(values) 
-      values[ordinal + pos] = findfirst(ord2rng[ordinal+pos],c)
+      values[ordinal + pos] = c
       if values[ordinal + pos] > 0
         R[i,index(dims, values)] = 1
       end
@@ -575,8 +571,6 @@ function Ua(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
             update_ordinals::Array{Int,1})
   @assert ordinal <= length(dims)
   if length(index_ordinals) == 0
-    #values = ones(Int, 1, length(dims))
-    #index = compute_index(values)
     index = compute_index([])
     # how to handle array index out of range?
     if valid_index(size, index + 1)
@@ -612,8 +606,7 @@ function Ua(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
     values = unindex(dims, i)
     pos = compute_index(values) # TODO: handle the case of pos out of bounds properly
     if valid_index(size, pos + 1) 
-      #values[ordinal + pos] = update(values) 
-      values[ordinal + pos] = findfirst(ord2rng[ordinal+pos], update(values))
+      values[ordinal + pos] = update(values)
       if values[ordinal + pos] > 0
         R[i,index(dims, values)] = 1
       end
@@ -632,26 +625,12 @@ function Ua_alt(dims::Array{Int,1}, ordinal::Int, compute_index::Function,
   end
   return R
 end
-"""
-
-NOT USED RIGHT NOW
-
-"""
-function Ur(dims::Array{Int,1}, ordinal::Int, 
-           range::Array{Int,1}, assign_range::Array{Int,1})
-  d = prod(dims)
-  values = findall(assign_range, range)
-  result = spzeros(Int,d,d)
-  for i in values 
-    result += Uc(dims, ordinal, i)
-  end
-  return 1//length(values) * result
-end
 
 #--------------------------------------------------------------------
 # Filter operators 
 #--------------------------------------------------------------------
 
+# NOT USED
 """
     P(dims, values)
 
@@ -705,14 +684,14 @@ function P(dims::Array{Int,1}, test::Function, ordinals::Array{Int,1}, c::Int)
     values_restricted = unindex(dims_restricted, i)
     values = extend(values_restricted, swaps, length(dims))
     if test(values) == c
-      R += P(dims_restricted, values_restricted)
+      R[i,i] = 1
     end
   end
   for dim in dims_swapped[n+1:end]
     R = kron(R,I(dim))
   end
   K = compute_swaps_operator(dims, swaps)
-  return K * R * transpose(K) 
+  return K * R * K 
 end
 
 """
@@ -731,7 +710,7 @@ function P(dims::Array{Int,1}, test::Function, c::Int)
   for i = 1:d
     values = unindex(dims, i)
     if test(values) == c
-      R += P(dims, values)
+      R[i,i] = 1
     end
   end
   return R
