@@ -400,19 +400,19 @@ Compute operator that assigns `k`th variable value `c`
 as they are
 
 """
-function U_xk_c(dims::Array{Int,1}, k::Int, c::Int) 
+function U_xk_c(dims::Array{Int,1}, ordinal::Int, c::Int) 
   R = I(1)
-  for i = 1:(k - 1)
+  for i = 1:(ordinal - 1)
     R = kron(R, I(dims[i]))
   end
   # TODO: possibly change for value out of range!
-  value = findfirst(ord2rng[k], c)
+  value = findfirst(ord2rng[ordinal], c)
   if value > 0
-    R = kron(R, U_c(dims[k], value))
+    R = kron(R, U_c(dims[ordinal], value))
   else
-    R = kron(R, spzeros(Int, dims[k], dims[k]))
+    R = kron(R, spzeros(Int, dims[ordinal], dims[ordinal]))
   end
-  for i = (k + 1):length(dims)
+  for i = (ordinal + 1):length(dims)
     R = kron(R, I(dims[i]))
   end
   return R
@@ -498,7 +498,7 @@ function Ue(dims::Array{Int,1}, ordinal::Int,
     R = kron(R,I(dim))
   end
   K = compute_swaps_operator(dims, swaps)
-  return K * R * transpose(K) 
+  return K * R * K 
 end
 
 #--------------------------------------------------------------------
