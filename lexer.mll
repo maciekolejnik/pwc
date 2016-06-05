@@ -50,9 +50,7 @@ rule token = parse
 | ".."		     { DOTDOT }
 | ","		     { COMMA }
 
-| "int"	             { INT }
 | "bool"	     { BOOL }
-| "para"	     { PARA }
 
 | "+"		     { PLUS }
 | "-"		     { MINUS }
@@ -81,8 +79,6 @@ rule token = parse
 | "var"		     { VAR }
 | "const"	     { CONST }
 | "skip"	     { SKIP }
-| "skipIf"	     { SKIPIF }
-| "skipAsn"	     { SKIPASN }
 | "stop"	     { STOP }
 | "if"		     { IF }
 | "then"	     { THEN }
@@ -108,7 +104,6 @@ rule token = parse
   
 | "true"	     { TRUE }
 | "false"	     { FALSE }
-| "inf"	             { INFINTE }
 
 | number as n        { NUM (int_of_string n) }
 | rational as r      { RAT (rational_of_string r) }

@@ -6,7 +6,7 @@
 %token LE LEQ EQ NEQ GEQ GR
 %token LPAR RPAR
 %token BACK BAR
-%token TRUE FALSE INFINTE
+%token TRUE FALSE 
 
 /***********************************************************************/
 
@@ -20,7 +20,7 @@
 /***********************************************************************/
 
 %token SEMICOL 
-%token SKIP STOP SKIPIF SKIPASN
+%token SKIP STOP 
 %token ASSIGN RANDOM
 %token IF THEN ELSE FI
 %token WHILE DO OD
