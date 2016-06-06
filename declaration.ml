@@ -23,12 +23,6 @@ type decls =
     decl list
 ;;  
 
-(***********************************************************************)
-
-(* TODO: SOMETHING BETTER HERE? *)
-let minInt = -4 (* truncates integers *)
-and maxInt =  4 (* truncates integers *)
-;;
 
 (***********************************************************************)
 (** Symbol Table                                                       *)
@@ -37,7 +31,7 @@ and maxInt =  4 (* truncates integers *)
 let symTbl : (id, meta) Hashtbl.t = Hashtbl.create 10
 ;; 
 
-let populateSymTbl decls = 
+let populate_sym_tbl decls = 
   let add (id,m) = Hashtbl.add symTbl id m
   in  List.iter add decls
 ;;
@@ -161,7 +155,6 @@ let print_decls ds = output_decls stdout ds
 (** Julia Output                                                       *)
 (***********************************************************************)
 
-
 (**
  *     julia_dict name entries 
  *
@@ -232,13 +225,10 @@ let ord2rng_entries decls =
             if m == l 
             then ord2rng_entries_aux tl i 0
             else (is,r) :: ord2rng_entries_aux decls (i+1) (m+1)
-        | _ -> ord2rng_entries_aux tl i m
+        | Constant(_) -> 
+            ord2rng_entries_aux tl i m
         end
   in ord2rng_entries_aux decls 1 0
-;;
-
-let ord2rng_entry i (id,m) =
-  (string_of_int i, range_in_square_brackets (range m))
 ;;
 
 let julia_ords2rng decls =

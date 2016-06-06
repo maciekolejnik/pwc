@@ -35,6 +35,81 @@ let normalise alts =
 ;;
 
 (***********************************************************************)
+(** Semantic check                                                     *)
+(***********************************************************************)
+(*
+let rec check_tag_defined tag = 
+  if !(List.mem t tags) 
+  then failwith ("Tag " ^ tag ^ " not defined")
+;;
+
+let rec tags stmt = 
+  match stmt with 
+  | Stop | Skip | Assign(_,_) | Random(_,_) | Goto(_) -> 
+      [] 
+  | Tagged(t,s) -> 
+      [t] 
+  | Sequence(s1,s2) -> 
+      (tags s1) @ (tags s2)
+  | If(b,s1,s2) -> 
+      (tags s1) @ (tags s2)
+  | While(b,s) -> 
+      tags s
+  | For(i,b,u,s) -> 
+      (tags i) @ (tags u) @ (tags s)
+  | Case(a,cls,d) -> 
+      (List.flatten (List.map tags (List.map snd cls)))
+  | Repeat(s,b) -> 
+      tags s
+  | Choose(l,wsl) -> 
+      (List.flatten (List.map tags (List.map snd wsl)))
+;;
+*)
+
+let rec check_stmt stmt =
+  match stmt with
+  | Stop | Skip | Goto(_) -> 
+      ()
+  | Tagged(t,s) -> 
+      check_stmt s
+  | Assign(v,e) -> 
+      Expression.check_assigned_varref v;
+      Expression.check_expr e
+  | Random(v,r) ->
+      Expression.check_assigned_varref v
+      (* TODO: possibly check range, eg if constants appear there *)
+  | Sequence(s1,s2) ->
+      check_stmt s1;
+      check_stmt s2
+  | If(b,s1,s2) ->
+      Expression.check_bexpr b;
+      check_stmt s1;
+      check_stmt s2
+  | While(b,s) ->
+      Expression.check_bexpr b;
+      check_stmt s
+  | For(i,b,u,s) ->
+      check_stmt i;
+      Expression.check_bexpr b;
+      check_stmt u;
+      check_stmt s
+  | Case(a,csl,s) ->
+      Expression.check_aexpr a;
+      List.iter check_stmt (List.map snd csl);
+      check_stmt s
+  | Repeat(s,b) ->
+      check_stmt s;
+      Expression.check_bexpr b
+  | Choose(wsl) ->
+      List.iter check_stmt (List.map snd wsl)
+;;
+
+let semantic_check s = 
+  check_stmt s 
+;;
+
+
+(***********************************************************************)
 (** Generic Output                                                      *)
 (***********************************************************************)
 

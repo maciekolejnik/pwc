@@ -1,5 +1,6 @@
 open Global
 open Label 
+open Statement
 
 (** Computes initial label of a labelled statement *)
 let rec init lstmt =
@@ -41,18 +42,29 @@ let rec final lstmt =
 
 (***********************************************************************)
 
+
 let rec tags lstmt = 
   match lstmt with 
-  | LWhile(l,b,s) -> (tags s)
-  | LFor(l,i,b,u,s) -> (tags i) @ (tags u) @ (tags s)
-  | LCase(a,cls,d) -> (List.flatten (List.map tags (List.map snd cls)))
-  | LRepeat(l,s,b) -> (tags s)
-  | LChoose(l,wsl) -> (List.flatten (List.map tags (List.map snd wsl)))
-  | LIf(l,b,s1,s2) -> (tags s1) @ (tags s2)
-  | LSequence(s1,s2) -> (tags s1) @ (tags s2)
-  | LTagged(l,s) -> [(l, init(s))] 
-  | _ -> []
-
+  | LStop(_) | LSkip(_) | LAssign(_,_,_) | LRandom(_,_,_) | LGoto(_,_) -> 
+      [] 
+  | LSequence(s1,s2) -> 
+      (tags s1) @ (tags s2)
+  | LIf(l,b,s1,s2) -> 
+      (tags s1) @ (tags s2)
+  | LWhile(l,b,s) -> 
+      tags s
+  | LFor(l,i,b,u,s) -> 
+      (tags i) @ (tags u) @ (tags s)
+  | LCase(a,cls,d) -> 
+      (List.flatten (List.map tags (List.map snd cls)))
+  | LRepeat(l,s,b) -> 
+      (tags s)
+  | LChoose(l,wsl) -> 
+      (List.flatten (List.map tags (List.map snd wsl)))
+  | LTagged(t,s) -> 
+      [(t, init(s))] 
+;;
+  
 let flow lstmt =
   let tags = tags lstmt in 
   let rec auxFlow lstmt =
@@ -104,7 +116,7 @@ let flow lstmt =
         try 
           [link l (List.assoc t tags)]
         with Not_found ->
-          failwith ("Label " ^ t ^ " not matched")
+          failwith ("Tag " ^ t ^ " not defined")
   in 
   auxFlow lstmt
 ;;

@@ -15,9 +15,6 @@ and txtName  = ref "a.txt"
 and julName  = ref "a.jl"
 ;;
 
-let inputProgram = ref ""
-;;
-
 let fidVerbose = ref stdout
 and fidText    = ref stdout
 and fidJulia   = ref stdout

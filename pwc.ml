@@ -29,8 +29,7 @@ let arguments () =
     ("-j", Arg.Clear (flagJulia),   "Julia Output off [default: on] ");
     ("-J", Arg.Set   (flagJulia),   "Julia Output on  ");
     ("-o", Arg.Clear (flagOpt),     "Optimisations off [default: off] ");
-    ("-O", Arg.Set   (flagOpt),     "Optimisations used");
-    ("-e", Arg.Set_string (inputProgram), "Input program passed as string \n")]
+    ("-O", Arg.Set   (flagOpt),     "Optimisations used")];
   and set_filenames s =
     begin try 
       baseName := String.sub s 0 (String.index s '.')
@@ -47,12 +46,11 @@ let arguments () =
       end
     end
   and usage =
-    "Usage:\n\npwc [-e program | filename] [-v/-V][-t/-T][-j/-J][-o/-O]\n"
+    "Usage:\n\npwc filename [-v/-V][-t/-T][-j/-J][-o/-O]\n"
   in
   begin
     Arg.parse arglist (set_filenames) usage; 
-    (** check that program was passed either as string or as file *)
-    if !baseName = "" && !inputProgram = "" 
+    if !baseName = ""  
     then begin 
       Arg.usage arglist usage; 
       exit 1 
@@ -160,17 +158,14 @@ let main () =
 
   try 
 
-    let lexBuffer = 
-      if !baseName = "" 
-      then Lexing.from_string !inputProgram
-      else Lexing.from_channel (open_in !srcName) in
-
+    let lexBuffer = Lexing.from_channel (open_in !srcName) in
 
     begin
       try
-
         let (declList, syntaxTree) = Parser.prog Lexer.token lexBuffer in
         begin
+          populate_sym_tbl declList;
+          semantic_check syntaxTree;
           
           if !flagVerbose then 
             show_result declList syntaxTree;
@@ -181,7 +176,6 @@ let main () =
           begin
             if !flagVerbose then ignore (print_lstmt syntaxLabel);
             if !flagVerbose then print_newline ();
-            populateSymTbl declList;
             ignore (print_decls declList);
             ignore (print_blocks syntaxBlocks);
             ignore (print_flow syntaxFlow);

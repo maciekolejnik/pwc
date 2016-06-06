@@ -347,16 +347,16 @@ let julia_helper (l,blk) =
   let l = string_of_int l in
   match blk with
   | BTest(b) -> 
-      Expression.check_bexpr b;
+      (*Expression.check_bexpr b;*)
       julia_test_function l b
   | BAsn(x,e) ->
-      Expression.check_assigned_varref x;
+      (*Expression.check_assigned_varref x;
       (*Expression.check_aexpr e;*)
-      Expression.check_expr e;
+      Expression.check_expr e;*)
       julia_assign_function l x e;
       julia_func_if_array l x
   | BRnd(x,r) -> 
-      Expression.check_assigned_varref x;
+      (*Expression.check_assigned_varref x;*)
       (*TODO check_range (args) *)
       julia_func_if_array l x
   | _ -> ()
