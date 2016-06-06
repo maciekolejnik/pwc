@@ -21,7 +21,7 @@ type block =
   | BChoose
   | BGoto of tag
   | BTest  of bexpr
-  | BAsn  of varref * aexpr
+  | BAsn  of varref * expr
   | BRnd  of varref * range
 ;;
 
@@ -38,8 +38,8 @@ let rec blocks lstmt =
        [(l, BSkip)]
    | LTagged(l,s) ->
        blocks s
-   | LAssign(l,x,a) ->
-       [(l, BAsn(x,a))]
+   | LAssign(l,x,e) ->
+       [(l, BAsn(x,e))]
    | LRandom(l,x,r) ->
        [(l, BRnd(x,r))]
    | LSequence(s1,s2) ->
@@ -205,8 +205,27 @@ let ordinals_julia_list varrefs =
   apply_julia_func "round" ["Int"; "[" ^ (String.concat ", " ords) ^ "]"]
 ;;
 
-let normal_assign x a l =
+(*
+let normal_assign x e l =
   let varrefs = aexpr_vars a in
+  let ords = ordinals_julia_list varrefs
+  and fl = "const F" ^ l in
+  match x with
+  | Var(id) -> 
+      if !flagOpt
+      then julia_assignment fl (ue_opt (id2ord id) ords l)
+      else julia_assignment fl (ue (id2ord id) l) 
+  | ArrElem(id,e) ->
+      let size = string_of_int (Declaration.size (Declaration.meta id)) 
+      and idx_varrefs = aexpr_vars e in
+      let idx_ords = ordinals_julia_list idx_varrefs in
+      if !flagOpt
+      then julia_assignment fl (ua_opt (id2ord id) idx_ords size ords l)
+      else julia_assignment fl (ua (id2ord id) size l)
+;;*)
+
+let normal_assign x e l =
+  let varrefs = expr_vars e in
   let ords = ordinals_julia_list varrefs
   and fl = "const F" ^ l in
   match x with
@@ -289,14 +308,14 @@ let julia_test_function l bexpr =
 ;;
 
 (**
- *     julia_assign_function l bexpr
- *
- * Generate 'assign' function corresponding to label `l` 
- * and RHS expression `aexpr`
- * *)
-let julia_assign_function l varref aexpr =
+    julia_assign_function l expr
+ 
+ Generate 'assign' function corresponding to label `l` 
+ and RHS expression `expr`
+*)
+let julia_assign_function l varref expr =
   let name = "assign" ^ l
-  and ret = "return " ^ idx2val (ord varref) (aexpr_to_julia_string aexpr)
+  and ret = "return " ^ idx2val (ord varref) (expr_to_julia_string expr)
   in  julia_function name ["values"] [ret]
 ;;
 
@@ -332,7 +351,8 @@ let julia_helper (l,blk) =
       julia_test_function l b
   | BAsn(x,e) ->
       Expression.check_assigned_varref x;
-      Expression.check_aexpr e;
+      (*Expression.check_aexpr e;*)
+      Expression.check_expr e;
       julia_assign_function l x e;
       julia_func_if_array l x
   | BRnd(x,r) -> 

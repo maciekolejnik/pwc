@@ -89,7 +89,6 @@ rule token = parse
 | "od"		     { OD }
 | "for"              { FOR }
 | "in"               { IN } 
-| "rof"              { ROF }
 | "repeat"           { REPEAT }
 | "until"            { UNTIL }
 | "choose"	     { CHOOSE }

@@ -83,43 +83,6 @@ function e_i(dim,i)
   return R
 end
 
-"""
-    findall(lookedfor, target)
-
-Find all indices of elements from 'lookedfor' in 'target'
-
-# Examples
-```julia 
-julia> findall([1,3], [1,2,3,4])
-2-element Array{Any,1}:
- 1
- 3
-
-julia> findall([2,3,4],[1,3,5])
-1-element Array{Any,1}:
- 2
-```
-"""
-# NOT USED CURRENTLY - USED ONLY WHEN Ur USED
-function findall(lookedfor, target)
-  @assert issorted(lookedfor) && issorted(target)
-  i, j = 1, 1
-  result = []
-  while i <= length(lookedfor) && lookedfor[i] <= target[end]
-    if lookedfor[i] > target[j]
-      j += 1
-    elseif lookedfor[i] < target[j]
-      i += 1
-    else 
-      push!(result, j)
-      i += 1
-      j += 1
-    end
-  end
-  result
-end
-
-
 #=
 State of variables in a program can be represented twofold.
 Firstly, it could be an array specifying value of each variable

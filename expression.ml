@@ -38,6 +38,11 @@ type bexpr =
    | Greater  of aexpr * aexpr
 ;;
 
+type expr =
+  | Aexpr of aexpr
+  | Bexpr of bexpr
+;;
+
 (***********************************************************************)
 (** Auxiliary                                                          *)
 (***********************************************************************)
@@ -72,6 +77,12 @@ let rec bexpr_vars bexpr =
   | Greater(e1,e2) -> aexpr_vars e1 @ aexpr_vars e2
 ;;
 
+let expr_vars expr = 
+  match expr with
+  | Aexpr(a) -> aexpr_vars a
+  | Bexpr(b) -> bexpr_vars b
+;;
+
 let id varref = 
   match varref with
   | Var(id) -> id
@@ -94,6 +105,10 @@ let ordinals varref =
   | ArrElem(id,e) -> 
       let elem_ord i = id2ord id ^ " + " ^ (string_of_int i)
       in  List.map elem_ord (interval 0 (size - 1))
+;;
+
+let convert n =
+  if n = 0 then False else True
 ;;
 
 (***********************************************************************)
@@ -182,6 +197,12 @@ let rec check_bexpr bexpr =
   | NotEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
   | GrEqual(e1,e2) -> check_aexpr e1; check_aexpr e2
   | Greater(e1,e2) -> check_aexpr e1; check_aexpr e2
+;;
+
+let check_expr expr =
+  match expr with
+  | Aexpr(a) -> check_aexpr a
+  | Bexpr(b) -> check_bexpr b
 ;;
 
 
@@ -364,25 +385,43 @@ let default_bp =
 ;;
 
 (**
- *     bexpr_to_string ?ap ?bp bexpr
+ *     expr_printer
  *
- * Return the string representation of `bexpr`, using 
- * the aexpr printer `ap` and bexpr 
- * printer `bp` if present
+ * Printer data structure for expr 
  *)
-let rec bexpr_to_string ?(ap=default_ap) ?(bp=default_bp) bexpr = 
+type expr_printer =
+  {  print_aexpr : aexpr_printer;
+     print_bexpr : bexpr_printer;
+  }
+;;
+
+let default_ep =
+  {  print_aexpr = default_ap;  
+     print_bexpr = default_bp;  
+  }
+;;
+
+(**
+     bexpr_to_string ?ep bexpr
+ 
+ Return the string representation of `bexpr`, using 
+ the expr printer `ep` 
+*)
+let rec bexpr_to_string ?(ep=default_ep) bexpr = 
+  let ap = ep.print_aexpr
+  and bp = ep.print_bexpr in
   match bexpr with 
   | True -> 
       bp.print_true () 
   | False ->  
       bp.print_false () 
   | Not(e) ->   
-      let e = bexpr_to_string ~ap:ap ~bp:bp e
+      let e = bexpr_to_string ~ep:ep e
       in  bp.print_not e 
   | And(e1,e2) -> 
-      apply_bexpr bp.print_and ap bp e1 e2
+      apply_bexpr bp.print_and ep e1 e2
   | Or(e1,e2) -> 
-      apply_bexpr bp.print_or ap bp e1 e2
+      apply_bexpr bp.print_or ep e1 e2
   | Lesser(e1,e2) -> 
       apply_aexpr bp.print_lesser ap e1 e2
   | LeEqual(e1,e2) -> 
@@ -396,14 +435,24 @@ let rec bexpr_to_string ?(ap=default_ap) ?(bp=default_bp) bexpr =
   | Greater(e1,e2) ->
       apply_aexpr bp.print_greater ap e1 e2
 (** Aixiliary *)
-and apply_bexpr print_fun ap bp e1 e2 =
-  let e1 = bexpr_to_string ~ap:ap ~bp:bp e1 
-  and e2 = bexpr_to_string ~ap:ap ~bp:bp e2 
+and apply_bexpr print_fun ep e1 e2 =
+  let e1 = bexpr_to_string ~ep:ep e1 
+  and e2 = bexpr_to_string ~ep:ep e2 
   in print_fun e1 e2
 and apply_aexpr print_fun ap e1 e2 =
   let e1 = aexpr_to_string ~ap:ap e1 
   and e2 = aexpr_to_string ~ap:ap e2 
   in print_fun e1 e2
+;;
+
+(***********************************************************************)
+	
+let rec expr_to_string ?(ep=default_ep) expr = 
+  match expr with
+  | Aexpr(a) ->
+      aexpr_to_string ~ap:ep.print_aexpr a
+  | Bexpr(b) -> 
+      bexpr_to_string ~ep:ep b
 ;;
 
 (***********************************************************************)
@@ -418,6 +467,8 @@ let output_aexpr outch e = output_string outch (aexpr_to_string e)
 let output_bexpr outch e = output_string outch (bexpr_to_string e)
 ;;
 
+let output_expr outch e = output_string outch (expr_to_string e)
+;;
 
 (***********************************************************************)
 (** Text Output                                                        *)
@@ -429,6 +480,9 @@ let print_aexpr e = output_aexpr stdout e
 ;;
 	
 let print_bexpr e = output_bexpr stdout e
+;;
+
+let print_expr e = output_expr stdout e
 ;;
 
 (***********************************************************************)
@@ -463,12 +517,25 @@ and div e1 e2 =
   "div(" ^ e1 ^ ", " ^ e2 ^ ")" 
 ;;
 
+let julia_ep = 
+  { default_ep with
+    print_aexpr = julia_ap;
+  }
+;;
+
 let aexpr_to_julia_string e =
   aexpr_to_string ~ap:julia_ap e
 ;;
 
 let bexpr_to_julia_string e =
-  bexpr_to_string ~ap:julia_ap e
+  bexpr_to_string ~ep:julia_ep e
+;;
+
+let expr_to_julia_string e =
+  match e with
+  | Aexpr(a) -> aexpr_to_julia_string a
+  | Bexpr(b) -> "convert(Int, " ^ bexpr_to_julia_string b ^ ")"
+(*  expr_to_string ~ep:julia_ep e*)
 ;;
 
 (** 
@@ -487,5 +554,9 @@ let julia_aexpr e =
 *)
 let julia_bexpr e =
   julia_string (bexpr_to_julia_string e)
+;;
+
+let julia_expr e =
+  julia_string (expr_to_string e)
 ;;
 

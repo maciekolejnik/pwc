@@ -6,7 +6,7 @@
 %token LE LEQ EQ NEQ GEQ GR
 %token LPAR RPAR
 %token BACK BAR
-%token TRUE FALSE 
+%token TRUE FALSE
 
 /***********************************************************************/
 
@@ -24,7 +24,7 @@
 %token ASSIGN RANDOM
 %token IF THEN ELSE FI
 %token WHILE DO OD
-%token FOR IN ROF
+%token FOR IN 
 %token REPEAT UNTIL
 %token CHOOSE OR COLON RO
 %token CASE OF DEFAULT ESAC
@@ -87,9 +87,6 @@ decl:
 
 range:
   BOOL                          { [0;1] }  
-| INT				{ Global.interval 
-                                  Declaration.minInt 
-                                  Declaration.maxInt }
 | LBR consts RBR 		{ List.sort_uniq compare $2 }
 ;
 
@@ -132,7 +129,7 @@ aexpr:
 bexpr:
   LPAR bexpr RPAR		{ $2 }
 | TRUE			        { Expression.True }
-| FALSE			        { Expression.False }
+| FALSE                         { Expression.False }
 | NOT bexpr		        { Expression.Not($2) }
 | bexpr AND bexpr		{ Expression.And($1,$3) }
 | bexpr LOR bexpr		{ Expression.Or($1,$3) }
@@ -143,6 +140,10 @@ bexpr:
 | aexpr GEQ aexpr		{ Expression.GrEqual($1,$3) }
 | aexpr GR aexpr		{ Expression.Greater($1,$3) }
 ;
+
+expr: 
+  aexpr                         { Expression.Aexpr($1) }
+| bexpr                         { Expression.Bexpr($1) }
 
 cond:
   bexpr                         { Expression.Not($1) }
@@ -160,7 +161,7 @@ stmt:
 | ID COLON stmt %prec LABEL     { Statement.Tagged($1,$3) }
 | STOP			        { Statement.Stop }
 | SKIP			        { Statement.Skip }
-| varref ASSIGN aexpr	        { Statement.Assign($1,$3) }
+| varref ASSIGN expr            { Statement.Assign($1,$3) }
 | varref RANDOM range	        { Statement.Random($1,$3) }
 | stmt SEMICOL stmt	        { Statement.Sequence($1,$3) }
 | IF bexpr THEN stmt ELSE stmt FI { Statement.If($2,$4,$6) }

@@ -7,7 +7,7 @@ type stmt =
    | Stop
    | Skip
    | Tagged of tag * stmt
-   | Assign of varref * aexpr
+   | Assign of varref * expr
    | Random of varref * range
    | Sequence of stmt * stmt
    | If of bexpr * stmt * stmt
@@ -103,6 +103,7 @@ let default_sp =
   }
 ;;
 
+(*
 let rec stmt_to_string 
             ?(sp=default_sp) ?(ap=default_ap) ?(bp=default_bp) stmt =
   match stmt with 
@@ -113,9 +114,9 @@ let rec stmt_to_string
   | Tagged(t,s) -> 
       let s = stmt_to_string ~sp:sp s 
       in  sp.print_tagged t s
-  | Assign(x,a) -> 
+  | Assign(x,e) -> 
       let x = varref_to_string ~vrp:ap.print_vr x
-      and a = aexpr_to_string ~ap:ap a
+      and e = expr_to_string ~ap:ap ~bp:bp e
       in  sp.print_assign x a
   | Random(x,r) -> 
       let x = varref_to_string ~vrp:ap.print_vr x
@@ -148,6 +149,59 @@ let rec stmt_to_string
   | Repeat(s,b) ->
       let s = stmt_to_string ~sp:sp s
       and b = bexpr_to_string ~ap:ap ~bp:bp b
+      in  sp.print_repeat s b 
+  | Choose(l) ->
+      let l = wstmts_to_string l
+      in  sp.print_choose l 
+  | Goto(t) ->
+       sp.print_goto t 
+       *)
+let rec stmt_to_string ?(sp=default_sp) ?(ep=default_ep) stmt =
+  let ap = ep.print_aexpr
+  and vrp = ep.print_aexpr.print_vr in
+  match stmt with 
+  | Stop -> 
+      sp.print_stop () 
+  | Skip -> 
+      sp.print_skip () 
+  | Tagged(t,s) -> 
+      let s = stmt_to_string ~sp:sp s 
+      in  sp.print_tagged t s
+  | Assign(x,e) -> 
+      let x = varref_to_string ~vrp:vrp x
+      and e = expr_to_string ~ep:ep e
+      in  sp.print_assign x e
+  | Random(x,r) -> 
+      let x = varref_to_string ~vrp:vrp x
+      and r = range_to_string r
+      in  sp.print_random x r
+  | Sequence(s1,s2) ->
+      let s1 = stmt_to_string ~sp:sp s1
+      and s2 = stmt_to_string ~sp:sp s2
+      in  sp.print_sequence s1 s2
+  | If(b,s1,s2) -> 
+      let b  = bexpr_to_string ~ep:ep b
+      and s1 = stmt_to_string ~sp:sp s1
+      and s2 = stmt_to_string ~sp:sp s2
+      in  sp.print_if b s1 s2
+  | While(b,s) ->
+      let b = bexpr_to_string ~ep:ep b
+      and s = stmt_to_string ~sp:sp s
+      in  sp.print_while b s
+  | For(i,b,u,s) ->
+      let i = stmt_to_string ~sp:sp i
+      and b = bexpr_to_string ~ep:ep b
+      and u = stmt_to_string ~sp:sp s
+      and s = stmt_to_string ~sp:sp s
+      in  sp.print_for i b u s 
+  | Case(a,l,d) -> 
+      let a = aexpr_to_string ~ap:ap a
+      and l = cstmts_to_string l
+      and d = stmt_to_string ~sp:sp d
+      in  sp.print_case a l d 
+  | Repeat(s,b) ->
+      let s = stmt_to_string ~sp:sp s
+      and b = bexpr_to_string ~ep:ep b
       in  sp.print_repeat s b 
   | Choose(l) ->
       let l = wstmts_to_string l

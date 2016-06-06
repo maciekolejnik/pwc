@@ -8,7 +8,7 @@ type lstmt =
    | LStop of label
    | LSkip of label
    | LTagged of tag * lstmt
-   | LAssign of label * varref * aexpr
+   | LAssign of label * varref * expr
    | LRandom of label * varref * range
    | LSequence of lstmt * lstmt
    | LIf of label * bexpr * lstmt * lstmt
@@ -122,7 +122,7 @@ let rec output_lstmt outch s =
       output_string outch "[";
       Expression.output_varref outch x;
       output_string outch " := ";
-      Expression.output_aexpr outch a;
+      Expression.output_expr outch a;
       output_string outch "]^";
       output_int outch l;
       output_string outch " "
