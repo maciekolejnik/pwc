@@ -130,7 +130,6 @@ if not os.path.exists("./generated"):
 if len(sys.argv) > 1:
   for file in sys.argv[1:]:
     extn = os.path.splitext(file)[1]
-    print(extn)
     if extn == ".pws":
       test_performance_stub(file, report)
     elif extn == ".pw":
