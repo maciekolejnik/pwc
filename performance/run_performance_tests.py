@@ -20,7 +20,7 @@ def execute(args, report):
   else:
     report.write("SUCCESS\n")
 
-@timeout(20)
+@timeout(3600)
 def calculate_average_execution_time(exe, script, n, report):
   total_time = 0
   for x in range(0,n):
@@ -164,20 +164,20 @@ now = datetime.datetime.now()
 timestamp = "_".join([str(now.year), str(now.month), str(now.day), 
                       str(now.hour), str(now.minute), str(now.second)])
 report_filename = "report" + timestamp + ".txt"
-#with open(report_filename, "w") as report:
-report = sys.stdout
-if len(sys.argv) > 1:
-  for file in sys.argv[1:]:
-    extn = os.path.splitext(file)[1]
-    print(extn)
-    if extn == ".pws":
+with open(report_filename, "w") as report:
+#report = sys.stdout
+  if len(sys.argv) > 1:
+    for file in sys.argv[1:]:
+      extn = os.path.splitext(file)[1]
+      print(extn)
+      if extn == ".pws":
+        test_performance_stub(file, report)
+      elif extn == ".pw":
+        test_performance(file, report)
+  else:
+    for file in glob.glob("*.pws"):
       test_performance_stub(file, report)
-    elif extn == ".pw":
+    for file in glob.glob("*.pw"):
       test_performance(file, report)
-else:
-  for file in glob.glob("*.pws"):
-    test_performance_stub(file, report)
-  for file in glob.glob("*.pw"):
-    test_performance(file, report)
 
-#report.close()
+report.close()
